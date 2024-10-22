@@ -69,6 +69,9 @@ std::pair<json,size_t> decode_bencoded_list(const std::string& encoded_value, si
         else if(encoded_value[index]=='i'){
           result = decode_bencoded_integer(encoded_value,index);
         }
+        else if(encoded_value[index]=='l'){
+          result = decode_bencoded_list(encoded_value, index);
+        }
         else{
           throw std::runtime_error("Unhandled encoded value: "+encoded_value);
         }
@@ -88,6 +91,11 @@ json decode_bencoded_value(const std::string& encoded_value, size_t index){
         std::pair<json, size_t> decoded_value  = decode_bencoded_integer(encoded_value,index);
         return decoded_value.first;
   }
+  else if(encoded_value[index]=='l'){
+        std::pair<json, size_t> decoded_value  = decode_bencoded_list(encoded_value,index);
+        return decoded_value.first;
+
+  }
   else {
     throw std::runtime_error("Unhandled encoded value: "+encoded_value);
   }
@@ -101,7 +109,7 @@ int main(int argc, char* argv[]){
       std::cout << decoded_value;
     }
     catch(const std::exception& e){
-      std::cerr << "Error:" << e.what() <<std::endl;
+      std::cerr << "Error: " << e.what() <<std::endl;
   
     }
   }
