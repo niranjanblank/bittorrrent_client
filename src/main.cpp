@@ -80,6 +80,48 @@ std::pair<json,size_t> decode_bencoded_list(const std::string& encoded_value, si
   }
    return {decoded_list, index + 1};
 }
+
+// dictionary
+std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_value, size_t index){
+  // increase the index to get past d 
+  index++;
+  // to store the json
+  json decoded_dict = json::object();
+  bool key = true;
+  std::string curr_key;
+  // check the datatype and call function accordingly
+  std::pair<json, size_t> result;
+  while(encoded_value[index]!='e'){
+     if(std::isdigit(encoded_value[index])){
+          result = decode_bencoded_string(encoded_value, index);  
+
+          }
+        else if(encoded_value[index]=='i'){
+          result = decode_bencoded_integer(encoded_value,index);
+        }
+        else if(encoded_value[index]=='l'){
+          result = decode_bencoded_list(encoded_value, index);
+        }
+        else if(encoded_value[index]=='d'){
+          result = decode_bencoded_dictionary(encoded_value, index);
+        }
+        else{
+          throw std::runtime_error("Unhandled encoded value: "+encoded_value);
+        }
+        
+        if(key){
+          curr_key = result.first;
+          key=false;
+        }
+        else{
+          decoded_dict[curr_key] = result.first;
+          key=true;
+        }
+        index = result.second;
+      
+  }
+  return {decoded_dict, index+1};
+}
 //
 json decode_bencoded_value(const std::string& encoded_value, size_t index){
   // string bencoded value have this format digit: string , here digit = length of string
@@ -95,6 +137,10 @@ json decode_bencoded_value(const std::string& encoded_value, size_t index){
         std::pair<json, size_t> decoded_value  = decode_bencoded_list(encoded_value,index);
         return decoded_value.first;
 
+  }
+  else if(encoded_value[index]=='d'){
+    std::pair<json, size_t> decoded_value = decode_bencoded_dictionary(encoded_value, index);
+    return decoded_value.first;
   }
   else {
     throw std::runtime_error("Unhandled encoded value: "+encoded_value);
