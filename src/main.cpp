@@ -1,8 +1,22 @@
 #include<iostream>
 #include<string>
+#include<fstream>
+#include<iomanip>
+#include <sstream>
 #include "lib/nlohmann/json.hpp"
 
 using json = nlohmann::json;
+
+
+// convert raw data to hex
+std::string to_hex(const std::string& input){
+  std::ostringstream hex_stream;
+  for(unsigned char c: input){
+    hex_stream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+    }
+  
+ return hex_stream.str();
+}
 
 
 // string 
@@ -13,7 +27,14 @@ std::pair<json, size_t> decode_bencoded_string(const std::string& encoded_value,
           int length_of_string = std::stoi(encoded_value.substr(index,colon_index-index));
           // extracted string from colon_index+1 to the end 
           std::string extracted_string = encoded_value.substr(colon_index+1, length_of_string);
-          // validate length of extracted string matches actual length 
+          
+
+   // Check if the string contains binary data (non-printable characters)
+          if (std::any_of(extracted_string.begin(), extracted_string.end(),
+                          [](unsigned char c) { return c < 32 || c > 126; })) {
+              // Treat as binary and encode it to hex
+              return {json(to_hex(extracted_string)), colon_index + 1 + length_of_string};
+          }
     
           // colon_index + 1 + length_of_string gives the ending of current bencoded string
           return {json(extracted_string), colon_index + 1 + length_of_string};
@@ -147,13 +168,52 @@ json decode_bencoded_value(const std::string& encoded_value, size_t index){
   }
 }
 
+// parsing the torrent file
+json parse_torrent_file(std::string& file_name){
+    // read file
+      std::ifstream file(file_name, std::ios::binary);
+
+      if(!file){
+        throw std::runtime_error("File not found");
+      }
+
+      // parse the file
+      // get the size of the file
+      file.seekg(0, std::ios::end); // move to the end of the file
+      std::streamsize fileSize = file.tellg(); // get the file size 
+      // return back to the start
+      file.seekg(0, std::ios::beg);
+
+      // hold the file content in buffer
+      std::vector<char> buffer(fileSize);
+      // read the file to buffer;
+      if (!file.read(buffer.data(), fileSize)){
+        // if the file cannot be read
+        throw std::runtime_error("Couldnt read the file");
+      }
+      
+      // converting the buffer to string
+      std::string encoded_value(buffer.begin(), buffer.end());
+      json decoded_value = decode_bencoded_value(encoded_value, 0);
+
+     // std::string input_encoded_value = argv[1];
+      // json decoded_value = decode_bencoded_value(input_encoded_value,0);
+      return decoded_value;
+   
+}
+
 int main(int argc, char* argv[]){
   if(argc>1){
+    
+    // read torrent file
     try{
-      std::string input_encoded_value = argv[1];
-      json decoded_value = decode_bencoded_value(input_encoded_value,0);
-      std::cout << decoded_value;
-    }
+      std::string file_name = argv[1];
+      json decoded_value = parse_torrent_file(file_name);
+ // std::string input_encoded_value = argv[1];
+      // json decoded_value = decode_bencoded_value(input_encoded_value,0);
+      std::cout << decoded_value.dump();
+      
+   }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
   
