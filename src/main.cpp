@@ -18,7 +18,6 @@ std::string to_hex(const std::string& input){
  return hex_stream.str();
 }
 
-
 // string 
 std::pair<json, size_t> decode_bencoded_string(const std::string& encoded_value, size_t index){
         size_t colon_index = encoded_value.find(":", index);
@@ -30,11 +29,11 @@ std::pair<json, size_t> decode_bencoded_string(const std::string& encoded_value,
           
 
    // Check if the string contains binary data (non-printable characters)
-          if (std::any_of(extracted_string.begin(), extracted_string.end(),
-                          [](unsigned char c) { return c < 32 || c > 126; })) {
+       //   if (std::any_of(extracted_string.begin(), extracted_string.end(),
+         //                 [](unsigned char c) { return c < 32 || c > 126; })) {
               // Treat as binary and encode it to hex
-              return {json(to_hex(extracted_string)), colon_index + 1 + length_of_string};
-          }
+          //    return {json(to_hex(extracted_string)), colon_index + 1 + length_of_string};
+         // }
     
           // colon_index + 1 + length_of_string gives the ending of current bencoded string
           return {json(extracted_string), colon_index + 1 + length_of_string};
@@ -211,7 +210,8 @@ int main(int argc, char* argv[]){
       json decoded_value = parse_torrent_file(file_name);
  // std::string input_encoded_value = argv[1];
       // json decoded_value = decode_bencoded_value(input_encoded_value,0);
-      std::cout << decoded_value.dump();
+      std::cout << "Tracker URL: "<< decoded_value["announce"].get<std::string>()<<std::endl;
+      std::cout << "Pieces Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
       
    }
     catch(const std::exception& e){
