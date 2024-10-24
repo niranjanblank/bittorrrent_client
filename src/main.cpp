@@ -281,7 +281,7 @@ int main(int argc, char* argv[]){
       std::cout << "Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
       
       std::string encoded = encode_bencode(decoded_value["info"]);
-      
+      json redecoded  = decode_bencoded_value(encoded,0);
       // print all the keys in info
       
       // checking bencoding 
@@ -289,6 +289,26 @@ int main(int argc, char* argv[]){
       // std::cout << string_to_bencode("gameoflife") << std::endl;i
        // Convert Bencoded binary data to hex and print it for debugging
 // Convert Bencoded binary data to hex and print it for debugging
+
+      std::cout<<"original decoded"<<std::endl;
+      for (auto it = decoded_value["info"].begin(); it != decoded_value["info"].end(); ++it) {
+  if (it.key() !="pieces"){
+   std::cout << "Key: " << it.key() << " Value (hex): " << to_hex(it.value().dump()) << std::endl;
+  }
+}
+ std::cout<<"redecoded"<<std::endl;
+for (auto it = redecoded.begin(); it != redecoded.end(); ++it) {
+  if (it.key() !="pieces"){
+   std::cout << "Key: " << it.key() << " Value (hex): " << to_hex(it.value().dump()) << std::endl;
+  }
+}
+
+//for (auto it = redecided.begin(); it != decoded_value["info"].end(); ++it) {
+  //  std::cout << "Key: " << it.key() << " Value (hex): " << to_hex(it.value().dump()) << std::endl;
+//}
+
+      std::cout <<"original pieces hex: " <<to_hex(decoded_value["info"]["pieces"])<<std::endl;
+      std::cout << "redecoded pieces hex: " << to_hex(redecoded["pieces"])<<std::endl;
       std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
    }
     catch(const std::exception& e){
