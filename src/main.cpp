@@ -4,20 +4,17 @@
 #include<iomanip>
 #include <sstream>
 #include "lib/nlohmann/json.hpp"
-
+#include "lib/sha1.hpp"
 using json = nlohmann::json;
 
+std::string encode_bencode(const json& j);
 
-// convert raw data to hex
-std::string to_hex(const std::string& input){
-  std::ostringstream hex_stream;
-  for(unsigned char c: input){
-    hex_stream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
-    }
-  
- return hex_stream.str();
+std::string sha1_hash(const std::string& data) {
+    SHA1 sha1;
+    sha1.update(data);
+    std::string hash = sha1.final();
+    return hash;
 }
-
 // string 
 std::pair<json, size_t> decode_bencoded_string(const std::string& encoded_value, size_t index){
         size_t colon_index = encoded_value.find(":", index);
@@ -201,6 +198,76 @@ json parse_torrent_file(std::string& file_name){
    
 }
 
+// interger to bencoded
+std::string integer_to_bencode(int value){
+  return "i"+std::to_string(value)+"e";
+}
+
+// string to bencoded
+std::string string_to_bencode(const std::string& value){
+    return std::to_string(value.length())+":"+value;
+}
+// list to bencoded{
+std::string list_to_bencode(const json& json_array){
+  std::string bencoded_data = "l";
+
+  for (auto& item: json_array){
+    bencoded_data += encode_bencode(item);
+  }
+
+  bencoded_data += "e";
+  return bencoded_data;
+}
+
+// Function to encode a json dictionary into Bencode format
+std::string dict_to_bencode(const json& json_dict) {
+    std::string bencoded_data = "d";
+
+    // Get all keys and sort them lexicographically
+    std::vector<std::string> keys;
+    for (auto it = json_dict.begin(); it != json_dict.end(); it++) {
+        keys.push_back(it.key());
+    }
+    std::sort(keys.begin(), keys.end());
+
+    // Encode key-value pairs in Bencode format
+    for (const auto& key : keys) {
+        bencoded_data += string_to_bencode(key);  // Keys must always be strings in Bencode
+        bencoded_data += encode_bencode(json_dict[key]);  // Values can be any Bencode-compatible type
+    }
+
+    bencoded_data += "e";  // End of dictionary
+    return bencoded_data;
+}
+
+std::string encode_bencode(const json& j){
+
+  if(j.is_string()){
+    return string_to_bencode(j.get<std::string>());
+  }
+  else if(j.is_number_integer()){
+    return integer_to_bencode(j.get<int>());
+  }
+  else if(j.is_array()){
+    return list_to_bencode(j);
+  }
+  else if(j.is_object()){
+    return dict_to_bencode(j);
+  }
+  else {
+    throw std::runtime_error("Unsupported json type for bencode");
+  }
+}
+
+// Convert raw binary data to hexadecimal format for debugging
+std::string to_hex(const std::string& input) {
+    std::ostringstream hex_stream;
+    for (unsigned char c: input) {
+        hex_stream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+    }
+    return hex_stream.str();
+}
+
 int main(int argc, char* argv[]){
   if(argc>1){
     
@@ -211,8 +278,18 @@ int main(int argc, char* argv[]){
  // std::string input_encoded_value = argv[1];
       // json decoded_value = decode_bencoded_value(input_encoded_value,0);
       std::cout << "Tracker URL: "<< decoded_value["announce"].get<std::string>()<<std::endl;
-      std::cout << "Pieces Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
+      std::cout << "Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
       
+      std::string encoded = encode_bencode(decoded_value["info"]);
+      
+      // print all the keys in info
+      
+      // checking bencoding 
+      // std::cout << integer_to_bencode(32) << std::endl;
+      // std::cout << string_to_bencode("gameoflife") << std::endl;i
+       // Convert Bencoded binary data to hex and print it for debugging
+// Convert Bencoded binary data to hex and print it for debugging
+      std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
