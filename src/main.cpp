@@ -96,23 +96,14 @@ std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_va
   index++;
   // to store the json
   json decoded_dict = json::object();
-  bool key = true;
-  std::string curr_key;
-  // check the datatype and call function accordingly
-  std::pair<json, size_t> result;
+
   while(encoded_value[index]!='e'){
-    result = decode_bencoded_value(encoded_value, index);
+    std::pair<json, size_t> key = decode_bencoded_string(encoded_value, index);
+    index = key.second;
+    std::pair<json, size_t> value = decode_bencoded_value(encoded_value, index);
+    index = value.second;
+    decoded_dict[key.first.get<std::string>()] = value.first;
 
-
-    if(key){
-      curr_key = result.first;
-      key=false;
-    }
-    else{
-      decoded_dict[curr_key] = result.first;
-      key=true;
-    }
-    index = result.second;
 
   }
   return {decoded_dict, index+1};
@@ -260,16 +251,16 @@ int main(int argc, char* argv[]){
       std::cout << "Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
       
       std::string encoded = encode_bencode(decoded_value["info"]);
-      json redecoded  = decode_bencoded_value(encoded,0);
-      // print all the keys in info
+      std::pair<json, size_t> redecoded  = decode_bencoded_value(encoded,0);
+      // print all the keys in info:
       
       // checking bencoding 
       // std::cout << integer_to_bencode(32) << std::endl;
       // std::cout << string_to_bencode("gameoflife") << std::endl;i
        // Convert Bencoded binary data to hex and print it for debugging
 // Convert Bencoded binary data to hex and print it for debugging
-      // std::cout <<"original pieces hex" <<to_hex(decoded_value["info"]["pieces"])<<std::endl;
-      // std::count << "redecoded pieces hes" << to_hex(redecoded["pieces"])<<std::endl;
+      std::cout <<"original pieces hex: " <<to_hex(decoded_value["info"]["pieces"])<<std::endl;
+      std::cout << "redecoded pieces hex: " << to_hex(redecoded.first["pieces"])<<std::endl;
      std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
    }
     catch(const std::exception& e){
