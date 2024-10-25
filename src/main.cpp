@@ -9,6 +9,10 @@ using json = nlohmann::json;
 
 std::string encode_bencode(const json& j);
 
+std::string encode_bencode(const json& j);
+std::pair<json, size_t>  decode_bencoded_value(const std::string& encoded_value, size_t index);
+std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_value, size_t index);
+
 std::string sha1_hash(const std::string& data) {
     SHA1 sha1;
     sha1.update(data);
@@ -79,28 +83,16 @@ std::pair<json,size_t> decode_bencoded_list(const std::string& encoded_value, si
   std::pair<json, size_t> result;
   // parse through the string until we reach end of list
   while(encoded_value[index]!='e'){
-      if(std::isdigit(encoded_value[index])){
-          result = decode_bencoded_string(encoded_value, index);  
-
-          }
-        else if(encoded_value[index]=='i'){
-          result = decode_bencoded_integer(encoded_value,index);
-        }
-        else if(encoded_value[index]=='l'){
-          result = decode_bencoded_list(encoded_value, index);
-        }
-        else{
-          throw std::runtime_error("Unhandled encoded value: "+encoded_value);
-        }
-        decoded_list.push_back(result.first);
-        index = result.second;
+      result = decode_bencoded_value(encoded_value, index);  
+      decoded_list.push_back(result.first);
+      index = result.second;
   }
    return {decoded_list, index + 1};
 }
 
 // dictionary
 std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_value, size_t index){
-  // increase the index to get past d 
+  // increase the index to get past d
   index++;
   // to store the json
   json decoded_dict = json::object();
@@ -109,55 +101,43 @@ std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_va
   // check the datatype and call function accordingly
   std::pair<json, size_t> result;
   while(encoded_value[index]!='e'){
-     if(std::isdigit(encoded_value[index])){
-          result = decode_bencoded_string(encoded_value, index);  
+    result = decode_bencoded_value(encoded_value, index);
 
-          }
-        else if(encoded_value[index]=='i'){
-          result = decode_bencoded_integer(encoded_value,index);
-        }
-        else if(encoded_value[index]=='l'){
-          result = decode_bencoded_list(encoded_value, index);
-        }
-        else if(encoded_value[index]=='d'){
-          result = decode_bencoded_dictionary(encoded_value, index);
-        }
-        else{
-          throw std::runtime_error("Unhandled encoded value: "+encoded_value);
-        }
-        
-        if(key){
-          curr_key = result.first;
-          key=false;
-        }
-        else{
-          decoded_dict[curr_key] = result.first;
-          key=true;
-        }
-        index = result.second;
-      
+
+    if(key){
+      curr_key = result.first;
+      key=false;
+    }
+    else{
+      decoded_dict[curr_key] = result.first;
+      key=true;
+    }
+    index = result.second;
+
   }
   return {decoded_dict, index+1};
 }
 //
-json decode_bencoded_value(const std::string& encoded_value, size_t index){
+
+// entry point to decode bencoded data
+std::pair<json, size_t>  decode_bencoded_value(const std::string& encoded_value, size_t index){
   // string bencoded value have this format digit: string , here digit = length of string
   if(std::isdigit(encoded_value[index])){
         std::pair<json, size_t> decoded_value = decode_bencoded_string(encoded_value,index);
-        return decoded_value.first;
+        return decoded_value;
   }
   else if(encoded_value[index]=='i'){
         std::pair<json, size_t> decoded_value  = decode_bencoded_integer(encoded_value,index);
-        return decoded_value.first;
+        return decoded_value;
   }
   else if(encoded_value[index]=='l'){
         std::pair<json, size_t> decoded_value  = decode_bencoded_list(encoded_value,index);
-        return decoded_value.first;
+        return decoded_value;
 
   }
   else if(encoded_value[index]=='d'){
     std::pair<json, size_t> decoded_value = decode_bencoded_dictionary(encoded_value, index);
-    return decoded_value.first;
+    return decoded_value;
   }
   else {
     throw std::runtime_error("Unhandled encoded value: "+encoded_value);
@@ -190,11 +170,10 @@ json parse_torrent_file(std::string& file_name){
       
       // converting the buffer to string
       std::string encoded_value(buffer.begin(), buffer.end());
-      json decoded_value = decode_bencoded_value(encoded_value, 0);
-
+      std::pair<json, size_t> decoded_value = decode_bencoded_value(encoded_value, 0);
      // std::string input_encoded_value = argv[1];
       // json decoded_value = decode_bencoded_value(input_encoded_value,0);
-      return decoded_value;
+      return decoded_value.first;
    
 }
 
@@ -289,27 +268,9 @@ int main(int argc, char* argv[]){
       // std::cout << string_to_bencode("gameoflife") << std::endl;i
        // Convert Bencoded binary data to hex and print it for debugging
 // Convert Bencoded binary data to hex and print it for debugging
-
-      std::cout<<"original decoded"<<std::endl;
-      for (auto it = decoded_value["info"].begin(); it != decoded_value["info"].end(); ++it) {
-  if (it.key() !="pieces"){
-   std::cout << "Key: " << it.key() << " Value (hex): " << to_hex(it.value().dump()) << std::endl;
-  }
-}
- std::cout<<"redecoded"<<std::endl;
-for (auto it = redecoded.begin(); it != redecoded.end(); ++it) {
-  if (it.key() !="pieces"){
-   std::cout << "Key: " << it.key() << " Value (hex): " << to_hex(it.value().dump()) << std::endl;
-  }
-}
-
-//for (auto it = redecided.begin(); it != decoded_value["info"].end(); ++it) {
-  //  std::cout << "Key: " << it.key() << " Value (hex): " << to_hex(it.value().dump()) << std::endl;
-//}
-
-      std::cout <<"original pieces hex: " <<to_hex(decoded_value["info"]["pieces"])<<std::endl;
-      std::cout << "redecoded pieces hex: " << to_hex(redecoded["pieces"])<<std::endl;
-      std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
+      // std::cout <<"original pieces hex" <<to_hex(decoded_value["info"]["pieces"])<<std::endl;
+      // std::count << "redecoded pieces hes" << to_hex(redecoded["pieces"])<<std::endl;
+     std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
