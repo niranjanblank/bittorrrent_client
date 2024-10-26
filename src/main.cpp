@@ -250,6 +250,9 @@ int main(int argc, char* argv[]){
          // print all the keys in info:
       
       std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
+      std::cout <<"Piece Length: "<<decoded_value["info"]["piece length"].get<int>()<<std::endl;
+      std::string piece_hash = to_hex(decoded_value["info"]["pieces"]);
+      std::cout <<"Piece Hashes: "<<piece_hash<<std::endl;
    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
