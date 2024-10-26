@@ -10,8 +10,8 @@ using json = nlohmann::json;
 std::string encode_bencode(const json& j);
 
 std::string encode_bencode(const json& j);
-std::pair<json, size_t>  decode_bencoded_value(const std::string& encoded_value, size_t index);
-std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_value, size_t index);
+json  decode_bencoded_value(const std::string& encoded_value, size_t& index);
+json decode_bencoded_dictionary(const std::string& encoded_value, size_t& index);
 
 std::string sha1_hash(const std::string& data) {
     SHA1 sha1;
@@ -19,25 +19,20 @@ std::string sha1_hash(const std::string& data) {
     std::string hash = sha1.final();
     return hash;
 }
-// string 
-std::pair<json, size_t> decode_bencoded_string(const std::string& encoded_value, size_t index){
+
+// string
+json decode_bencoded_string(const std::string& encoded_value, size_t& index){
         size_t colon_index = encoded_value.find(":", index);
         if(colon_index != std::string::npos){
-          
-          int length_of_string = std::stoi(encoded_value.substr(index,colon_index-index));
-          // extracted string from colon_index+1 to the end 
-          std::string extracted_string = encoded_value.substr(colon_index+1, length_of_string);
-          
 
-   // Check if the string contains binary data (non-printable characters)
-       //   if (std::any_of(extracted_string.begin(), extracted_string.end(),
-         //                 [](unsigned char c) { return c < 32 || c > 126; })) {
-              // Treat as binary and encode it to hex
-          //    return {json(to_hex(extracted_string)), colon_index + 1 + length_of_string};
-         // }
-    
+          int length_of_string = std::stoi(encoded_value.substr(index,colon_index-index));
+          // extracted string from colon_index+1 to the end
+          std::string extracted_string = encoded_value.substr(colon_index+1, length_of_string);
+          // validate length of extracted string matches actual length
+
+          index = colon_index + 1 + length_of_string;
           // colon_index + 1 + length_of_string gives the ending of current bencoded string
-          return {json(extracted_string), colon_index + 1 + length_of_string};
+          return json(extracted_string);
 
         }
         else{
@@ -46,10 +41,10 @@ std::pair<json, size_t> decode_bencoded_string(const std::string& encoded_value,
         }
 
 }
-
 // integer 
 
-std::pair<json, size_t> decode_bencoded_integer(const std::string& encoded_value, size_t index){
+
+json decode_bencoded_integer(const std::string& encoded_value, size_t& index){
    //extracting integer part
    if(encoded_value[index] != 'i'){
       throw std::runtime_error("Invalid Integer Encoding");
@@ -68,73 +63,72 @@ std::pair<json, size_t> decode_bencoded_integer(const std::string& encoded_value
     else{
       index = e_location+1;
       // parse the string to get integer
-      return {json(std::stoll(int_part)), index };
+      return json(std::atoll(int_part.c_str()));
     }
-    
+
 }
 
 // list
-std::pair<json,size_t> decode_bencoded_list(const std::string& encoded_value, size_t index){
+
+json decode_bencoded_list(const std::string& encoded_value, size_t& index){
   // to store list data
   json decoded_list = json::array();
-// increase the index to skip l
+  // increase the index to skip l
   index++;
 
-  std::pair<json, size_t> result;
+
   // parse through the string until we reach end of list
-  while(encoded_value[index]!='e'){
-      result = decode_bencoded_value(encoded_value, index);  
-      decoded_list.push_back(result.first);
-      index = result.second;
+  while(index < encoded_value.length()&& encoded_value[index]!='e'){
+    json result = decode_bencoded_value(encoded_value, index);
+    decoded_list.push_back(result);
   }
-   return {decoded_list, index + 1};
+  index = index + 1;
+  return json(decoded_list);
 }
 
+
 // dictionary
-std::pair<json, size_t> decode_bencoded_dictionary(const std::string& encoded_value, size_t index){
+json decode_bencoded_dictionary(const std::string& encoded_value, size_t& index){
   // increase the index to get past d
   index++;
   // to store the json
   json decoded_dict = json::object();
 
-  while(encoded_value[index]!='e'){
-    std::pair<json, size_t> key = decode_bencoded_string(encoded_value, index);
-    index = key.second;
-    std::pair<json, size_t> value = decode_bencoded_value(encoded_value, index);
-    index = value.second;
-    decoded_dict[key.first.get<std::string>()] = value.first;
+  while(index < encoded_value.length() && encoded_value[index]!='e'){
+   json key = decode_bencoded_string(encoded_value, index);
+    json value = decode_bencoded_value(encoded_value, index);
+    decoded_dict[key.get<std::string>()] = value;
 
 
   }
-  return {decoded_dict, index+1};
-}
-//
+  index = index + 1;
+  return decoded_dict;
+}//
 
 // entry point to decode bencoded data
-std::pair<json, size_t>  decode_bencoded_value(const std::string& encoded_value, size_t index){
+json decode_bencoded_value(const std::string& encoded_value, size_t& index){
   // string bencoded value have this format digit: string , here digit = length of string
   if(std::isdigit(encoded_value[index])){
-        std::pair<json, size_t> decoded_value = decode_bencoded_string(encoded_value,index);
+        json decoded_value = decode_bencoded_string(encoded_value,index);
         return decoded_value;
   }
   else if(encoded_value[index]=='i'){
-        std::pair<json, size_t> decoded_value  = decode_bencoded_integer(encoded_value,index);
+        json decoded_value  = decode_bencoded_integer(encoded_value,index);
         return decoded_value;
   }
   else if(encoded_value[index]=='l'){
-        std::pair<json, size_t> decoded_value  = decode_bencoded_list(encoded_value,index);
+        json decoded_value  = decode_bencoded_list(encoded_value,index);
         return decoded_value;
 
   }
   else if(encoded_value[index]=='d'){
-    std::pair<json, size_t> decoded_value = decode_bencoded_dictionary(encoded_value, index);
+    json decoded_value = decode_bencoded_dictionary(encoded_value, index);
     return decoded_value;
   }
   else {
     throw std::runtime_error("Unhandled encoded value: "+encoded_value);
   }
 }
-
 // parsing the torrent file
 json parse_torrent_file(std::string& file_name){
     // read file
@@ -161,10 +155,12 @@ json parse_torrent_file(std::string& file_name){
       
       // converting the buffer to string
       std::string encoded_value(buffer.begin(), buffer.end());
-      std::pair<json, size_t> decoded_value = decode_bencoded_value(encoded_value, 0);
+      // start index for parsing
+      size_t index = 0;
+      json decoded_value = decode_bencoded_value(encoded_value, index);
      // std::string input_encoded_value = argv[1];
       // json decoded_value = decode_bencoded_value(input_encoded_value,0);
-      return decoded_value.first;
+      return decoded_value;
    
 }
 
@@ -251,17 +247,9 @@ int main(int argc, char* argv[]){
       std::cout << "Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
       
       std::string encoded = encode_bencode(decoded_value["info"]);
-      std::pair<json, size_t> redecoded  = decode_bencoded_value(encoded,0);
-      // print all the keys in info:
+         // print all the keys in info:
       
-      // checking bencoding 
-      // std::cout << integer_to_bencode(32) << std::endl;
-      // std::cout << string_to_bencode("gameoflife") << std::endl;i
-       // Convert Bencoded binary data to hex and print it for debugging
-// Convert Bencoded binary data to hex and print it for debugging
-      std::cout <<"original pieces hex: " <<to_hex(decoded_value["info"]["pieces"])<<std::endl;
-      std::cout << "redecoded pieces hex: " << to_hex(redecoded.first["pieces"])<<std::endl;
-     std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
+      std::cout <<"Info Hash: "<<sha1_hash(encoded)<<std::endl;
    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
