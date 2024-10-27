@@ -82,6 +82,7 @@ json decode_bencoded_list(const std::string& encoded_value, size_t& index){
     json result = decode_bencoded_value(encoded_value, index);
     decoded_list.push_back(result);
   }
+  // increase index to skip e
   index = index + 1;
   return json(decoded_list);
 }
