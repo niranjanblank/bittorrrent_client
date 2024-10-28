@@ -6,7 +6,7 @@ project(bittorrent-client)
 # set(CMAKE_CXX_STANDARD 23)
 
 # Recursively get all .cpp and .hpp files from the src directory
-file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.hpp)
+file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.hpp src/*.h)
 
 # create executable with the collected source files
 add_executable(bittorrent ${SOURCE_FILES})
