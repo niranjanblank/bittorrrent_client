@@ -26,28 +26,65 @@ struct Torrent{
   left(l), compact(c){}
 };
 
-json peer_discovery(std::string& base_url, Torrent& torrent ){
-  httplib::Client client(base_url);
 
-  // params object to hold query parameters
-  httplib::Params params;
-  params.emplace("info_hash", torrent.info_hash);
-  params.emplace("peer_id", torrent.peer_id);
-  params.emplace("port", std::to_string(torrent.port));
-  params.emplace("uploaded", std::to_string(torrent.uploaded));
-  params.emplace("downloaded", std::to_string(torrent.downloaded));
-  params.emplace("left",std::to_string(torrent.left));
-  params.emplace("compact", torrent.compact?"1":"0");
+// Function for peer discovery
+std::string urlEncode(const std::string& value) {
+    std::ostringstream escaped;
 
-  // Create a JSON object
-    json jsonParams;
-    for (const auto& param : params) {
-        jsonParams[param.first] = param.second; // Add key-value pairs to the JSON object
+    for (size_t i = 0; i < value.size(); ++i) {
+        unsigned char c = static_cast<unsigned char>(value[i]);
+
+        // Check if the character is unreserved
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c; // Append unreserved character directly
+        } else {
+            // Percent-encode the character
+            escaped << '%' << std::uppercase << std::hex << std::setw(2)
+                    << std::setfill('0') << static_cast<int>(c);
+        }
     }
 
-  return jsonParams;
-
+    return escaped.str();
 }
+// Function for peer discovery
+
+json peer_discovery(const std::string& base_url, const Torrent& torrent) {
+    httplib::Client client(base_url);
+
+    // Create a string to hold the query parameters
+    std::string query_params = "/get?info_hash=" + httplib::detail::encode_url(torrent.info_hash) +
+                               "&peer_id=" + httplib::detail::encode_url(torrent.peer_id) +
+                               "&port=" + std::to_string(torrent.port) +
+                               "&uploaded=" + std::to_string(torrent.uploaded) +
+                               "&downloaded=" + std::to_string(torrent.downloaded) +
+                               "&left=" + std::to_string(torrent.left) +
+                               "&compact=" + (torrent.compact ? "1" : "0");
+
+     // Print the full URL
+    std::cout << "Request URL: " << base_url + query_params << std::endl;
+    // Get request to tracker URL
+    auto res = client.Get(query_params);
+
+    // Create a JSON object to hold the response
+    json jsonResponse;
+
+    // Check the response
+    if (res && res->status == 200) {
+        std::cout << "Response: " << res->body << std::endl;  // Print the response body
+        // Parse the response body into a JSON object (assuming the response is valid JSON)
+        try {
+            jsonResponse = json::parse(res->body);
+        } catch (json::parse_error& e) {
+            std::cerr << "JSON parse error: " << e.what() << std::endl;
+        }
+    } else {
+        std::cerr << "Request failed with status: " << (res ? std::to_string(res->status) : "no response") << "\n";  // Print error status
+    }
+
+    return jsonResponse;  // Return the JSON response object
+}
+
+
 
 
 // parsing the torrent file
@@ -111,9 +148,9 @@ int main(int argc, char* argv[]){
 
       // peer peer_discovery
       Torrent torrent(info_hash,"00112233445566778899",6681,0,0,decoded_value["info"]["piece length"],true);
-      json torrent_test = peer_discovery(base_url,torrent);
-      std::cout << torrent_test.dump();
-
+      //json torrent_test = peer_discovery(base_url,torrent);
+      //std::cout << torrent_test.dump();
+      std::cout << urlEncode(info_hash);
    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
