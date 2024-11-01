@@ -44,11 +44,24 @@ std::string urlEncode(const std::string& value) {
 }
 // Function for peer discovery
 
-json peer_discovery(const std::string& base_url, const Torrent& torrent) {
-    httplib::Client client(base_url);
+std::vector<std::string> peer_discovery(const std::string& base_url, const Torrent& torrent) {
+  size_t last_index = base_url.find_last_of("/");
+// getting the domain and entry point, as cpp-httplib requires client to be made out of just domain
+  std::string domain = base_url.substr(0, last_index);
+  std::string entry_point = base_url.substr(last_index,base_url.size());
+  std::cout<<"Entry: "<<entry_point<<std::endl;
+    httplib::Client client(domain);
+    client.set_follow_location(true);  // Follow redirects, if any
+                                       //
+                                       //  // Define custom headers
+    httplib::Headers headers = {
+        {"User-Agent", "Mozilla/5.0"},  // Mimic a browser to avoid server rejection
+        {"Accept", "*/*"},              // Accept any content type
+        {"Connection", "keep-alive"}    // Keep the connection open if possible
+    };
 
     // Create a string to hold the query parameters
-    std::string query_params = "?info_hash=" + urlEncode(torrent.info_hash) +
+    std::string query_params = entry_point+"?info_hash=" + urlEncode(torrent.info_hash) +
                                "&peer_id=" + torrent.peer_id +
                                "&port=" + std::to_string(torrent.port) +
                                "&uploaded=" + std::to_string(torrent.uploaded) +
@@ -56,22 +69,21 @@ json peer_discovery(const std::string& base_url, const Torrent& torrent) {
                                "&left=" + std::to_string(torrent.left) +
                                "&compact=" + (torrent.compact ? "1" : "0");
 
-     // Print the full URL
-    std::cout << "Request URL: " << base_url + query_params << std::endl;
-    std::string url = base_url + query_params;
-    // Get request to tracker URL
-    auto res = client.Get(url);
-    std::cout <<"data:" << res->status;
+    // send the get Request
+    auto res = client.Get(query_params.c_str(), headers);
 
-    // Create a JSON object to hold the response
-    json jsonResponse;
-
+    std::vector<std::string> peers;  
+  
     // Check the response
     if (res && res->status == 200) {
-        std::cout << "Response: " << res->body << std::endl;  // Print the response body
+        //std::cout << "Response: " << res->body << std::endl;  // Print the response body
         // Parse the response body into a JSON object (assuming the response is valid JSON)
         try {
-            jsonResponse = json::parse(res->body);
+          // start index for decoding
+          size_t start_index = 0;
+          json decoded_response =  decode_bencode(res->body,start_index);    
+          std::cout << "Interval: " << decoded_response["interval"];
+          // jsonResponse = json::parse(res->body);
         } catch (json::parse_error& e) {
             std::cerr << "JSON parse error: " << e.what() << std::endl;
         }
@@ -79,7 +91,7 @@ json peer_discovery(const std::string& base_url, const Torrent& torrent) {
         std::cerr << "Request failed with status: " << (res ? std::to_string(res->status) : "no response") << "\n";  // Print error status
     }
 
-    return jsonResponse;  // Return the JSON response object
+  return peers;  // Return the JSON response object
 }
 
 
@@ -146,9 +158,7 @@ int main(int argc, char* argv[]){
 
       // peer peer_discovery
       Torrent torrent(info_hash,"00112233445566778899",6681,0,0,decoded_value["info"]["piece length"],true);
-      json torrent_test = peer_discovery(base_url,torrent);
-      std::cout << torrent_test.dump();
-      std::cout << urlEncode(info_hash);
+      std::vector<std::string> peers = peer_discovery(base_url,torrent);
    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
