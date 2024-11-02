@@ -94,7 +94,10 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
            int ip3 = static_cast<unsigned char>(peer_string[i+2]);
            int ip4 = static_cast<unsigned char>(peer_string[i+3]);
 
-          std::cout << ip1 << "." << ip2 << "." << ip3 << "." << ip4  << std::endl;
+           //A uint16_t can hold values from 0 to 65535 (which is the range of valid port numbers)
+          uint16_t port  = (static_cast<uint16_t>(static_cast<unsigned char>(peer_string[i+4])) << 8) | 
+            static_cast<uint16_t>(static_cast<unsigned char>(peer_string[i+5])); 
+          std::cout << ip1 << "." << ip2 << "." << ip3 << "." << ip4 << ":" << port << std::endl;
 
           }
 
