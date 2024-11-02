@@ -83,6 +83,22 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
           size_t start_index = 0;
           json decoded_response =  decode_bencode(res->body,start_index);    
           std::cout << "Interval: " << decoded_response["interval"];
+          //printing peers size
+          std::cout << "Peer size: " << decoded_response["peers"].size() << std::endl;
+
+          std::string peer_string = decoded_response["peers"];
+          
+          for(size_t i = 0; i < peer_string.size(); i += 6){
+            int ip1 = static_cast<unsigned char>(peer_string[i]);
+            int ip2 = static_cast<unsigned char>(peer_string[i+1]);
+           int ip3 = static_cast<unsigned char>(peer_string[i+2]);
+           int ip4 = static_cast<unsigned char>(peer_string[i+3]);
+
+          std::cout << ip1 << "." << ip2 << "." << ip3 << "." << ip4  << std::endl;
+
+          }
+
+
           // jsonResponse = json::parse(res->body);
         } catch (json::parse_error& e) {
             std::cerr << "JSON parse error: " << e.what() << std::endl;
