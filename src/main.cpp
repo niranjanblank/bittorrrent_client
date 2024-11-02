@@ -96,8 +96,13 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
 
            //A uint16_t can hold values from 0 to 65535 (which is the range of valid port numbers)
           uint16_t port  = (static_cast<uint16_t>(static_cast<unsigned char>(peer_string[i+4])) << 8) | 
-            static_cast<uint16_t>(static_cast<unsigned char>(peer_string[i+5])); 
-          std::cout << ip1 << "." << ip2 << "." << ip3 << "." << ip4 << ":" << port << std::endl;
+            static_cast<uint16_t>(static_cast<unsigned char>(peer_string[i+5]));
+             // Convert each segment of the IP address to a string
+          std::string address = std::to_string(ip1) + "." + std::to_string(ip2) + "." +
+                          std::to_string(ip3) + "." + std::to_string(ip4) + ":" + 
+                          std::to_string(port);
+          peers.push_back(address);
+        
 
           }
 
@@ -178,7 +183,10 @@ int main(int argc, char* argv[]){
       // peer peer_discovery
       Torrent torrent(info_hash,"00112233445566778899",6681,0,0,decoded_value["info"]["piece length"],true);
       std::vector<std::string> peers = peer_discovery(base_url,torrent);
-   }
+      for (std::string address: peers){
+        std::cout << address << std::endl;
+      }
+    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
   
