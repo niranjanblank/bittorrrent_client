@@ -143,7 +143,11 @@ std::string create_handshake(const std::string& info_hash, const std::string& pe
   // rerserve 8 bytes
   uint8_t reserved[8] = {0,0,0,0,0,0,0,0};
   // reinterpret cast tells compiler to treat the uint8_t arrary as a raw sequence of bytes
-  handshake.append(reinterpret_cast<const char*>(reserved), sizeof(reserved));
+  handshake.append(reinterpret_cast<const char *>(reserved), sizeof(reserved));
+  // Convert the hex-encoded info_hash to raw bytes
+  // std::vector<uint8_t> info_hash_bytes = hex_to_bytes(info_hash);
+  // Append the info_hash (20 bytes)
+  // handshake.append(reinterpret_cast<const char*>(info_hash_bytes.data()), info_hash_bytes.size());
   handshake += info_hash;
   handshake += peer_id;
 
