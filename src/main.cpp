@@ -43,6 +43,8 @@ std::string urlEncode(const std::string& value) {
     return escaped.str();
 }
 // Function for peer discovery
+//
+
 
 std::vector<std::string> peer_discovery(const std::string& base_url, const Torrent& torrent) {
   size_t last_index = base_url.find_last_of("/");
@@ -89,10 +91,10 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
           std::string peer_string = decoded_response["peers"];
           
           for(size_t i = 0; i < peer_string.size(); i += 6){
-            int ip1 = static_cast<unsigned char>(peer_string[i]);
-            int ip2 = static_cast<unsigned char>(peer_string[i+1]);
-           int ip3 = static_cast<unsigned char>(peer_string[i+2]);
-           int ip4 = static_cast<unsigned char>(peer_string[i+3]);
+          int ip1 = static_cast<unsigned char>(peer_string[i]);
+          int ip2 = static_cast<unsigned char>(peer_string[i+1]);
+          int ip3 = static_cast<unsigned char>(peer_string[i+2]);
+          int ip4 = static_cast<unsigned char>(peer_string[i+3]);
 
            //A uint16_t can hold values from 0 to 65535 (which is the range of valid port numbers)
           uint16_t port  = (static_cast<uint16_t>(static_cast<unsigned char>(peer_string[i+4])) << 8) | 
@@ -118,7 +120,35 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
   return peers;  // Return the JSON response object
 }
 
+// converting hexadecimal representation to bytes
+std::vector<uint8_t> hex_to_bytes(const std::string hex) {
+  std::vector<uint8_t> bytes;
 
+  for (size_t i =0; i < hex.size(); i+=2){
+    // stoi converts the hexadecimal value to its integer value, which is then casted to byte value
+    // we use 16 in stoi to tell it that the value is hex. so the conversion will be hex to integer
+    uint8_t byte = static_cast<uint8_t>(std::stoi(hex.substr(i,2), nullptr, 16));
+    bytes.push_back(byte);
+  }
+  return bytes;
+}
+
+// function for handshake
+std::string create_handshake(const std::string& info_hash, const std::string& peer_id){
+    
+  std::string handshake;
+  // length of the protocol
+  handshake += static_cast<char>(19);
+  handshake += "BitTorrent protocol";
+  // rerserve 8 bytes
+  uint8_t reserved[8] = {0,0,0,0,0,0,0,0};
+  // reinterpret cast tells compiler to treat the uint8_t arrary as a raw sequence of bytes
+  handshake.append(reinterpret_cast<const char*>(reserved), sizeof(reserved));
+  handshake += info_hash;
+  handshake += peer_id;
+
+  return handshake;
+}
 
 
 // parsing the torrent file
@@ -186,6 +216,10 @@ int main(int argc, char* argv[]){
       for (std::string address: peers){
         std::cout << address << std::endl;
       }
+
+      // handshake
+      std::string handshake = create_handshake(info_hash, "00112233445566778899");
+      std::cout << "Handshake message: " << handshake << std::endl;
     }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
