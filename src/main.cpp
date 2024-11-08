@@ -3,6 +3,7 @@
 #include<fstream>
 #include<iomanip>
 #include <sstream>
+#include<random>
 #include "lib/nlohmann/json.hpp"
 #include "lib/sha1.hpp"
 #include "lib/bencode/bencode.hpp"
@@ -153,6 +154,31 @@ std::string create_handshake(const std::string& info_hash, const std::string& pe
   return handshake;
 }
 
+std::string generate_peer_id(){
+  const std::string prefix =  "-MY1000-"; // 8 bytes
+  const int peer_id_length = 20;
+    
+  // random number generation
+  std::random_device rd;
+
+  std::uniform_int_distribution<> dist(0,35); // 0-9 and a-z for alpha numeric
+  // initialize random number generator gen with random seed rd
+  std::mt19937 gen(rd());
+  std::string peer_id = prefix;
+
+  // generate the remaining 12 random alphanumeric character
+  for(size_t i = prefix.size(); i < peer_id_length; i++){
+    int random_value = dist(gen);
+    if(random_value < 10){
+      peer_id += '0'+random_value;
+    }
+    else{
+      peer_id += 'a' + (random_value - 10);
+    }
+  }
+
+  return peer_id;
+}
 
 // parsing the torrent file
 json parse_torrent_file(std::string& file_name){
@@ -213,15 +239,17 @@ int main(int argc, char* argv[]){
       std::string piece_hash = to_hex(decoded_value["info"]["pieces"]);
       std::cout <<"Piece Hashes: "<<piece_hash<<std::endl;
 
+      std::string peer_id = generate_peer_id();
+      std::cout <<"Peer ID: "<<peer_id<<std::endl;
       // peer peer_discovery
-      Torrent torrent(info_hash,"00112233445566778899",6681,0,0,decoded_value["info"]["piece length"],true);
+      Torrent torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
       std::vector<std::string> peers = peer_discovery(base_url,torrent);
       for (std::string address: peers){
         std::cout << address << std::endl;
       }
 
       // handshake
-      std::string handshake = create_handshake(info_hash, "00112233445566778899");
+      std::string handshake = create_handshake(info_hash, peer_id);
       std::cout << "Handshake message: " << handshake << std::endl;
     }
     catch(const std::exception& e){
