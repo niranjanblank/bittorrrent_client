@@ -9,6 +9,9 @@
 #include "lib/bencode/bencode.hpp"
 #include "lib/utils.hpp"
 #include "lib/httplib.h"
+#include<winsock2.h>
+#include <ws2tcpip.h>   // Required for InetPton()                        //
+#pragma comment(lib, "ws2_32.lib")
 using json = nlohmann::json;
 
 
@@ -180,6 +183,59 @@ std::string generate_peer_id(){
   return peer_id;
 }
 
+void send_handshake(const std::string& handshake, const std::string peer_ip, unsigned short peer_port){
+  std::cout << "Handshake message: " << handshake << std::endl;
+  WSADATA wsaData;
+  int result = WSAStartup(MAKEWORD(2,2), &wsaData);
+  
+  if(result != 0){
+    std::cerr << "WSAStartup failed: " << result << std::endl;
+  }
+
+  // socket for client
+  SOCKET client_socket = socket(AF_INET, SOCK_STREAM, 0);
+
+  // checking socket
+  if (client_socket == INVALID_SOCKET) {
+    std::cerr << "Failed to create socket: " << WSAGetLastError() << std::endl;
+    WSACleanup();
+    return;
+  }
+
+
+  // define the server address 
+  sockaddr_in server_address;
+  server_address.sin_family = AF_INET;
+  server_address.sin_port = htons(peer_port);
+
+  // link to server ip
+  InetPton(AF_INET, peer_ip.c_str(), &server_address.sin_addr.s_addr);
+
+  // connect to the server
+  if(connect(client_socket, (sockaddr*) &server_address, sizeof(server_address))==0){
+    std::cout << "Client connected to server" << std::endl;
+  }
+  else{
+    std::cerr << "Client connection failed" << std::endl;
+    WSACleanup();
+    return;
+  }
+
+  // send handshake to server
+  size_t byte_count = send(client_socket, handshake.c_str(), handshake.size(),0);
+ if(byte_count == SOCKET_ERROR){
+    std::cerr << "Server sent error :" << WSAGetLastError() << std::endl;
+    return;
+  }
+  else{
+    std::cout << "Server: sent " << byte_count <<std::endl;
+  }
+
+  // close the socket
+  closesocket(client_socket);
+  WSACleanup();
+}
+
 // parsing the torrent file
 json parse_torrent_file(std::string& file_name){
     // read file
@@ -217,7 +273,6 @@ json parse_torrent_file(std::string& file_name){
 
 
 
-
 int main(int argc, char* argv[]){
   if(argc>1){
     
@@ -250,7 +305,8 @@ int main(int argc, char* argv[]){
 
       // handshake
       std::string handshake = create_handshake(info_hash, peer_id);
-      std::cout << "Handshake message: " << handshake << std::endl;
+      send_handshake(handshake,"165.232.41.73", 51556);
+      //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
     }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
