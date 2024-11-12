@@ -231,9 +231,27 @@ void send_handshake(const std::string& handshake, const std::string peer_ip, uns
     std::cout << "Server: sent " << byte_count <<std::endl;
   }
 
+  // receive data from server
+  //
+  char received_data[1024];
+
+  int bytes_received = recv(client_socket, received_data, sizeof(received_data),0);
+  if(bytes_received < 0){
+    std::cerr << "No data received from server" << std::endl;
+  }
+  else if(bytes_received == 0){
+    std:: cerr << "No response form server" << std::endl;
+  }
+  else {
+    std::cout << "Data received: " << received_data << std::endl;
+    std::cout << "Bytes received: " << bytes_received << std::endl;
+
+  }
   // close the socket
   closesocket(client_socket);
   WSACleanup();
+
+
 }
 
 // parsing the torrent file
@@ -305,6 +323,10 @@ int main(int argc, char* argv[]){
 
       // handshake
       std::string handshake = create_handshake(info_hash, peer_id);
+// Print the handshake in hexadecimal to inspect it
+for (unsigned char c : handshake) {
+    printf("%02x ", c);
+}
       send_handshake(handshake,"165.232.41.73", 51556);
       //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
     }
