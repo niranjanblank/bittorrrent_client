@@ -30,6 +30,13 @@ struct Torrent{
   left(l), compact(c){}
 };
 
+struct HandshakeMessage{
+  uint8_t protocol_length;
+  std::string protocol_identifier;
+  std::vector<uint8_t> reserved_bytes;
+  std::vector<uint8_t> info_hash;
+  std::string peer_id;
+};
 
 // Function for peer discovery
 std::string urlEncode(const std::string& value) {
@@ -183,6 +190,28 @@ std::string generate_peer_id(){
   return peer_id;
 }
 
+HandshakeMessage parse_handshake_message(const char* received_data, int bytes_received){
+  std::cout << "Data received: " << received_data << std::endl;
+  std::cout << "Bytes received: " << bytes_received << std::endl;
+  
+  HandshakeMessage handshake_message;
+  // parsing the handshake
+  // first byte is length of protocol
+  handshake_message.protocol_length = static_cast<uint8_t>(received_data[0]);
+  // 19 bytes protocol identifier
+  handshake_message.protocol_identifier = std::string(received_data+1, handshake_message.protocol_length);
+  // 8 reserved_bytes
+  handshake_message.reserved_bytes = std::vector<uint8_t>(received_data+1+handshake_message.protocol_length, 
+      received_data+1+handshake_message.protocol_length+8);
+  // 20 bytes info hash
+  handshake_message.info_hash = std::vector<uint8_t>(received_data+1+handshake_message.protocol_length+8, 
+      received_data+1+handshake_message.protocol_length+8+20);
+  // 20 bytes peer id
+  handshake_message.peer_id = std::string(received_data + 1 + handshake_message.protocol_length + 8 + 20, 
+                                    received_data + 1 + handshake_message.protocol_length + 8 + 20 + 20);
+  return handshake_message;
+}
+
 void send_handshake(const std::string& handshake, const std::string peer_ip, unsigned short peer_port){
   std::cout << "Handshake message: " << handshake << std::endl;
   WSADATA wsaData;
@@ -243,8 +272,11 @@ void send_handshake(const std::string& handshake, const std::string peer_ip, uns
     std:: cerr << "No response form server" << std::endl;
   }
   else {
-    std::cout << "Data received: " << received_data << std::endl;
-    std::cout << "Bytes received: " << bytes_received << std::endl;
+
+    HandshakeMessage parsed_handshake = parse_handshake_message(received_data, bytes_received);
+    std::cout << "Protocol Length: " << static_cast<int>(parsed_handshake.protocol_length) << std::endl;
+    std::cout << "Protocol identifier: " << parsed_handshake.protocol_identifier << std::endl;
+    std::cout << "PeerID: " << to_hex(parsed_handshake.peer_id) << std::endl;
 
   }
   // close the socket
@@ -323,10 +355,7 @@ int main(int argc, char* argv[]){
 
       // handshake
       std::string handshake = create_handshake(info_hash, peer_id);
-// Print the handshake in hexadecimal to inspect it
-for (unsigned char c : handshake) {
-    printf("%02x ", c);
-}
+
       send_handshake(handshake,"165.232.41.73", 51556);
       //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
     }
