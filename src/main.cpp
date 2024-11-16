@@ -10,33 +10,13 @@
 #include "lib/utils.hpp"
 #include "lib/httplib.h"
 #include<winsock2.h>
-#include <ws2tcpip.h>   // Required for InetPton()                        //
+#include <ws2tcpip.h>// Required for InetPton()                       
+#include "lib/structures.hpp"
 #pragma comment(lib, "ws2_32.lib")
 using json = nlohmann::json;
 
 
-struct Torrent{
-  std::string info_hash;
-  std::string peer_id;
-  int port;
-  int uploaded;
-  int downloaded;
-  int left;
-  bool compact;
 
-  // constructor
-  Torrent(const std::string& ih,const std::string& pid,int p, int up, int down, 
-      int l, bool c): info_hash(ih), peer_id(pid), port(p), uploaded(up), downloaded(down), 
-  left(l), compact(c){}
-};
-
-struct HandshakeMessage{
-  uint8_t protocol_length;
-  std::string protocol_identifier;
-  std::vector<uint8_t> reserved_bytes;
-  std::vector<uint8_t> info_hash;
-  std::string peer_id;
-};
 
 // Function for peer discovery
 std::string urlEncode(const std::string& value) {
