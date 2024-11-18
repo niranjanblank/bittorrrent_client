@@ -18,22 +18,6 @@ using json = nlohmann::json;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 int main(int argc, char* argv[]){
   if(argc>1){
     
@@ -63,13 +47,25 @@ int main(int argc, char* argv[]){
       for (std::string address: peers){
         std::cout << address << std::endl;
       }
+      
+      // initialize tcp server
+      SOCKET client_socket = initialize_socket("165.232.41.73", 51556);
+      if (client_socket == INVALID_SOCKET) {
+        return -1;
+      }
 
       // handshake
       std::string handshake = create_handshake(info_hash, peer_id);
-
-      send_handshake(handshake,"165.232.41.73", 51556);
+      
+      auto handshake_received = send_handshake(handshake, client_socket);
       //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
-    }
+      //
+      if (!handshake_received){
+        std::cerr << "Handshake failed" << std::endl;
+        cleanup_socket(client_socket);
+        return -1;
+      }
+    //}
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
   

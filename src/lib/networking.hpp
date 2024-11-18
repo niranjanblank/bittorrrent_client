@@ -110,52 +110,9 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
   return peers;  // Return the JSON response object
 }
 
-
-// function for handshake
-std::string create_handshake(const std::string& info_hash, const std::string& peer_id){
-    
-  std::string handshake;
-  // length of the protocol
-  handshake += static_cast<char>(19);
-  handshake += "BitTorrent protocol";
-  // rerserve 8 bytes
-  uint8_t reserved[8] = {0,0,0,0,0,0,0,0};
-  // reinterpret cast tells compiler to treat the uint8_t arrary as a raw sequence of bytes
-  handshake.append(reinterpret_cast<const char *>(reserved), sizeof(reserved));
-  // Convert the hex-encoded info_hash to raw bytes
-  std::vector<uint8_t> info_hash_bytes = hex_to_bytes(info_hash);
-  // Append the info_hash (20 bytes)
-  handshake.append(info_hash_bytes.begin(), info_hash_bytes.end());
-  handshake += peer_id;
-
-  return handshake;
-}
-
-HandshakeMessage parse_handshake_message(const char* received_data, int bytes_received){
-  std::cout << "Data received: " << received_data << std::endl;
-  std::cout << "Bytes received: " << bytes_received << std::endl;
-  
-  HandshakeMessage handshake_message;
-  // parsing the handshake
-  // first byte is length of protocol
-  handshake_message.protocol_length = static_cast<uint8_t>(received_data[0]);
-  // 19 bytes protocol identifier
-  handshake_message.protocol_identifier = std::string(received_data+1, handshake_message.protocol_length);
-  // 8 reserved_bytes
-  handshake_message.reserved_bytes = std::vector<uint8_t>(received_data+1+handshake_message.protocol_length, 
-      received_data+1+handshake_message.protocol_length+8);
-  // 20 bytes info hash
-  handshake_message.info_hash = std::vector<uint8_t>(received_data+1+handshake_message.protocol_length+8, 
-      received_data+1+handshake_message.protocol_length+8+20);
-  // 20 bytes peer id
-  handshake_message.peer_id = std::string(received_data + 1 + handshake_message.protocol_length + 8 + 20, 
-                                    received_data + 1 + handshake_message.protocol_length + 8 + 20 + 20);
-  return handshake_message;
-}
-
-void send_handshake(const std::string& handshake, const std::string peer_ip, unsigned short peer_port){
-  std::cout << "Handshake message: " << handshake << std::endl;
-  WSADATA wsaData;
+// initialize socket
+SOCKET initialize_socket(const std::string& peer_ip, unsigned short peer_port){
+ WSADATA wsaData;
   int result = WSAStartup(MAKEWORD(2,2), &wsaData);
   
   if(result != 0){
@@ -179,7 +136,12 @@ void send_handshake(const std::string& handshake, const std::string peer_ip, uns
   server_address.sin_port = htons(peer_port);
 
   // link to server ip
-  InetPton(AF_INET, peer_ip.c_str(), &server_address.sin_addr.s_addr);
+  if (InetPton(AF_INET, peer_ip.c_str(), &server_address.sin_addr.s_addr) <= 0) {
+        std::cerr << "Invalid IP address: " << WSAGetLastError() << std::endl;
+        closesocket(client_socket);
+        WSACleanup();
+        return INVALID_SOCKET;
+    }
 
   // connect to the server
   if(connect(client_socket, (sockaddr*) &server_address, sizeof(server_address))==0){
@@ -188,8 +150,65 @@ void send_handshake(const std::string& handshake, const std::string peer_ip, uns
   else{
     std::cerr << "Client connection failed" << std::endl;
     WSACleanup();
-    return;
+    return INVALID_SOCKET;
   }
+
+  return client_socket;
+
+}
+
+// socket cleanup
+void cleanup_socket(SOCKET client_socket){
+  closesocket(client_socket);
+  WSACleanup();
+}
+
+// function for handshake
+std::string create_handshake(const std::string& info_hash, const std::string& peer_id){
+    
+  std::string handshake;
+  // length of the protocol
+  handshake += static_cast<char>(19);
+  handshake += "BitTorrent protocol";
+  // rerserve 8 bytes
+  uint8_t reserved[8] = {0,0,0,0,0,0,0,0};
+  // reinterpret cast tells compiler to treat the uint8_t arrary as a raw sequence of bytes
+  handshake.append(reinterpret_cast<const char *>(reserved), sizeof(reserved));
+  // Convert the hex-encoded info_hash to raw bytes
+  std::vector<uint8_t> info_hash_bytes = hex_to_bytes(info_hash);
+  // Append the info_hash (20 bytes)
+  handshake.append(info_hash_bytes.begin(), info_hash_bytes.end());
+  handshake += peer_id;
+
+  return handshake;
+}
+
+
+
+HandshakeMessage parse_handshake_message(const char* received_data, int bytes_received){
+  std::cout << "Data received: " << received_data << std::endl;
+  std::cout << "Bytes received: " << bytes_received << std::endl;
+  
+  HandshakeMessage handshake_message;
+  // parsing the handshake
+  // first byte is length of protocol
+  handshake_message.protocol_length = static_cast<uint8_t>(received_data[0]);
+  // 19 bytes protocol identifier
+  handshake_message.protocol_identifier = std::string(received_data+1, handshake_message.protocol_length);
+  // 8 reserved_bytes
+  handshake_message.reserved_bytes = std::vector<uint8_t>(received_data+1+handshake_message.protocol_length, 
+      received_data+1+handshake_message.protocol_length+8);
+  // 20 bytes info hash
+  handshake_message.info_hash = std::vector<uint8_t>(received_data+1+handshake_message.protocol_length+8, 
+      received_data+1+handshake_message.protocol_length+8+20);
+  // 20 bytes peer id
+  handshake_message.peer_id = std::string(received_data + 1 + handshake_message.protocol_length + 8 + 20, 
+                                    received_data + 1 + handshake_message.protocol_length + 8 + 20 + 20);
+  return handshake_message;
+}
+
+std::optional<HandshakeMessage> send_handshake(const std::string& handshake, SOCKET client_socket){
+  std::cout << "Handshake message: " << handshake << std::endl;
 
   // send handshake to server
   size_t byte_count = send(client_socket, handshake.c_str(), handshake.size(),0);
@@ -206,23 +225,18 @@ void send_handshake(const std::string& handshake, const std::string peer_ip, uns
   char received_data[1024];
 
   int bytes_received = recv(client_socket, received_data, sizeof(received_data),0);
-  if(bytes_received < 0){
-    std::cerr << "No data received from server" << std::endl;
-  }
-  else if(bytes_received == 0){
-    std:: cerr << "No response form server" << std::endl;
-  }
-  else {
 
-    HandshakeMessage parsed_handshake = parse_handshake_message(received_data, bytes_received);
-    std::cout << "Protocol Length: " << static_cast<int>(parsed_handshake.protocol_length) << std::endl;
-    std::cout << "Protocol identifier: " << parsed_handshake.protocol_identifier << std::endl;
-    std::cout << "PeerID: " << to_hex(parsed_handshake.peer_id) << std::endl;
+   if (bytes_received <= 0) {
+        std::cerr << "Failed to receive handshake response: " << WSAGetLastError() << std::endl;
+        return std::nullopt; // Indicate failure
+    }
+  // parsed received handshake
+  HandshakeMessage parsed_handshake = parse_handshake_message(received_data, bytes_received);
+  std::cout << "Protocol Length: " << static_cast<int>(parsed_handshake.protocol_length) << std::endl;
+  std::cout << "Protocol identifier: " << parsed_handshake.protocol_identifier << std::endl;
+  std::cout << "PeerID: " << to_hex(parsed_handshake.peer_id) << std::endl;
 
-  }
-  // close the socket
-  closesocket(client_socket);
-  WSACleanup();
-
+  
+ return parsed_handshake;
 
 }
