@@ -22,7 +22,7 @@ int main(int argc, char* argv[]){
   if(argc>1){
     
     // read torrent file
-    try{
+  try{
       std::string file_name = argv[1];
       json decoded_value = parse_torrent_file(file_name);
  // std::string input_encoded_value = argv[1];
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]){
         cleanup_socket(client_socket);
         return -1;
       }
-    //}
+    }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
   

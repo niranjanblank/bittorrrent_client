@@ -126,7 +126,7 @@ SOCKET initialize_socket(const std::string& peer_ip, unsigned short peer_port){
   if (client_socket == INVALID_SOCKET) {
     std::cerr << "Failed to create socket: " << WSAGetLastError() << std::endl;
     WSACleanup();
-    return;
+    return INVALID_SOCKET;
   }
 
 
@@ -214,7 +214,7 @@ std::optional<HandshakeMessage> send_handshake(const std::string& handshake, SOC
   size_t byte_count = send(client_socket, handshake.c_str(), handshake.size(),0);
  if(byte_count == SOCKET_ERROR){
     std::cerr << "Server sent error :" << WSAGetLastError() << std::endl;
-    return;
+    return std::nullopt;
   }
   else{
     std::cout << "Server: sent " << byte_count <<std::endl;
