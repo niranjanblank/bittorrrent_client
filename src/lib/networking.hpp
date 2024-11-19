@@ -246,7 +246,7 @@ int read_exact_bytes(SOCKET socket, char* buffer, int bytes_to_read){
   int total_bytes_read = 0;
 // we keep on reading from the stream until we have rearched our required bytes
   while(total_bytes_read < bytes_to_read){
-    int bytes_read = recv(socket,buffer+total_bytes_read,bytes_to_read - total_bytes,0);
+    int bytes_read = recv(socket,buffer+total_bytes_read,bytes_to_read - total_bytes_read,0);
 
     if (bytes_read <=0){
       // connection closed or errorr occured
@@ -263,16 +263,24 @@ int read_exact_bytes(SOCKET socket, char* buffer, int bytes_to_read){
 void read_peer_messages(SOCKET client_socket){
  PeerMessage message; 
 // read the length
-  char buffer[4];
-  int bytes_received = recv(client_socket, buffer, 4,0);
-  if (bytes_received <= 0) {
-        std::cerr << "Failed to receive peer messages: " << WSAGetLastError() << std::endl;
-        return; // Indicate failure
-    }
+  char length_buffer[4];
+  read_exact_bytes(client_socket, length_buffer, 4);
+  // nhtohl converts a 32-bit integerr from network byte order to host byte order
+  message.length = ntohl(*reinterpret_cast<uint32_t*>(length_buffer));
+  // read message id byte
+  char id_buffer[1];
+  read_exact_bytes(client_socket, id_buffer, 1);
+  message.id = id_buffer[0];
+  // read payload
+  // payload size = total length - size of message id
+  message.payload.resize(message.length - 1); // exclude the message ID   
+// message.payload.data() returns pointer to the first element of vector, read_exact_bytes requires char pointer,
+// so reinterpret_casting it to char * 
+  read_exact_bytes(client_socket, reinterpret_cast<char*>(message.payload.data()), message.payload.size());
+
   std::cout << "----Peer Messages-----"  << std::endl;
-  std::cout << "Bytes Received: " << bytes_received << std::endl;
-  std::cout << "Raw Data: ";
-for (int i = 0; i < bytes_received; ++i) {
-    std::cout << data_received[i];
-}
+  std::cout << "Length : " << message.length << std::endl;
+  std::cout << "Message ID: " << static_cast<int>(message.id) << std::endl;
+
+
 }
