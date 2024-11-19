@@ -26,3 +26,9 @@ struct HandshakeMessage{
   std::vector<uint8_t> info_hash;
   std::string peer_id;
 };
+
+struct PeerMessage{
+  uint32_t length; // message length prefix
+  uint8_t id; // message id
+  std::vectot<uint8_t> payload;
+}

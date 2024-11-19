@@ -65,6 +65,9 @@ int main(int argc, char* argv[]){
         cleanup_socket(client_socket);
         return -1;
       }
+      
+      peer_messages(client_socket);
+      
     }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;

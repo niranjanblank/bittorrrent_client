@@ -240,3 +240,39 @@ std::optional<HandshakeMessage> send_handshake(const std::string& handshake, SOC
  return parsed_handshake;
 
 }
+
+// function to read exact number of bytes from the tcp stream
+int read_exact_bytes(SOCKET socket, char* buffer, int bytes_to_read){
+  int total_bytes_read = 0;
+// we keep on reading from the stream until we have rearched our required bytes
+  while(total_bytes_read < bytes_to_read){
+    int bytes_read = recv(socket,buffer+total_bytes_read,bytes_to_read - total_bytes,0);
+
+    if (bytes_read <=0){
+      // connection closed or errorr occured
+      throw std::runtime_error("Connection closed or errorr during recv");
+    }
+
+    total_bytes_read += bytes_read;
+  }
+
+  return total_bytes_read;
+}
+
+
+void read_peer_messages(SOCKET client_socket){
+ PeerMessage message; 
+// read the length
+  char buffer[4];
+  int bytes_received = recv(client_socket, buffer, 4,0);
+  if (bytes_received <= 0) {
+        std::cerr << "Failed to receive peer messages: " << WSAGetLastError() << std::endl;
+        return; // Indicate failure
+    }
+  std::cout << "----Peer Messages-----"  << std::endl;
+  std::cout << "Bytes Received: " << bytes_received << std::endl;
+  std::cout << "Raw Data: ";
+for (int i = 0; i < bytes_received; ++i) {
+    std::cout << data_received[i];
+}
+}
