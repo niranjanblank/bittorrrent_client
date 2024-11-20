@@ -66,7 +66,7 @@ int main(int argc, char* argv[]){
         return -1;
       }
       
-      read_peer_messages(client_socket);
+      handle_peer_messages(client_socket);
       
     }
     catch(const std::exception& e){
