@@ -66,7 +66,7 @@ int main(int argc, char* argv[]){
         return -1;
       }
       
-      handle_peer_messages(client_socket);
+      handle_peer_messages(client_socket, 0,decoded_value["info"]["piece length"].get<int>() );
       
     }
     catch(const std::exception& e){
