@@ -336,7 +336,7 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
 
   uint32_t network_piece_index = htonl(piece_index);
   uint32_t network_offset = htonl(piece_index);
-  uint32_t network_length = htonl(piece_index);
+  uint32_t network_length = htonl(length);
   memcpy(buffer+5, &network_piece_index,4);
   memcpy(buffer+9, &network_offset,4);
   memcpy(buffer+13, &network_length,4);
@@ -346,11 +346,12 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
 
 }
 
-
-  void download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
+void download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
     const uint32_t block_size = 16*1024;
     uint32_t offset = 0;
 
+
+    // to store the blocks downloaded
     std::vector<uint8_t> piece_data(piece_length);
 
     while(offset < piece_length){
@@ -362,21 +363,51 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
 
       PeerMessage message = read_peer_messages(client_socket);
 
+
+        // Handle keep-alive messages
+        if (message.length == 0) {
+            std::cout << "Keep-alive message received. Skipping..." << std::endl;
+            continue; // Ignore and wait for the next message
+        }
+
+        std::cout << "Message ID received: " << static_cast<int>(message.id) << std::endl;
+
+        if (message.id != 7) {
+            std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
+            continue; // Skip processing and wait for the next message
+        }
       if(message.id == 7){
         // piece message
         uint32_t received_index = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()));
         uint32_t received_begin = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()+4));
+
+        std::vector<uint8_t> block(message.payload.begin()+8, message.payload.end());
+
+        if (received_index == piece_index && received_begin == offset){
+          std::copy(block.begin(), block.end(), piece_data.begin()+offset);
+          offset += block.size();
+
+          std::cout << "Received piece index: " << received_index
+          << ", begin: " << received_begin
+          << ", expected offset: " << offset
+          << ", block size: " << block.size() << std::endl;
+        }
+        else {
+                std::cerr << "Invalid block received." << std::endl;
+                break;
+            }
       }
       
-    std::cout << "Length Received: " << message.length << std::endl;
-    std::cout << "Message Id Received: " << static_cast<int>(message.id) << std::endl;
-    break;
+  //  std::cout << "Length Received: " << message.length << std::endl;
+   // std::cout << "Message Id Received: " << static_cast<int>(message.id) << std::endl;
 
   }
 }
 
 void handle_peer_messages(SOCKET client_socket, int32_t piece_index, uint32_t piece_length){
- while(true){
+  std::cout << "Piece Length" << piece_length << std::endl;
+
+  while(true){
    PeerMessage message = read_peer_messages(client_socket);
 
    //if we encounter keep alive message, we skip processing
