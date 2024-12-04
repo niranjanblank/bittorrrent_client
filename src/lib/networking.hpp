@@ -218,26 +218,29 @@ std::optional<HandshakeMessage> send_handshake(const std::string& handshake, SOC
     return std::nullopt;
   }
   else{
-    std::cout << "Server: sent " << byte_count <<std::endl;
+    std::cout << "Handshake sent: " << byte_count << " bytes" << std::endl;
   }
 
   // receive data from server
-  //
-  char received_data[1024];
+  char handshake_buffer[68];
 
-  int bytes_received = recv(client_socket, received_data, sizeof(received_data),0);
+  int bytes_received = recv(client_socket, handshake_buffer, sizeof(handshake_buffer),0);
 
+  
    if (bytes_received <= 0) {
         std::cerr << "Failed to receive handshake response: " << WSAGetLastError() << std::endl;
         return std::nullopt; // Indicate failure
     }
+ if (bytes_received < 68) {
+        std::cerr << "Failed to receive complete handshake: " << bytes_received << " bytes received." << std::endl;
+        return std::nullopt;
+    }
   // parsed received handshake
-  HandshakeMessage parsed_handshake = parse_handshake_message(received_data, bytes_received);
+  HandshakeMessage parsed_handshake = parse_handshake_message(handshake_buffer, bytes_received); 
   std::cout << "Protocol Length: " << static_cast<int>(parsed_handshake.protocol_length) << std::endl;
   std::cout << "Protocol identifier: " << parsed_handshake.protocol_identifier << std::endl;
   std::cout << "PeerID: " << to_hex(parsed_handshake.peer_id) << std::endl;
 
-  
  return parsed_handshake;
 
 }
@@ -335,7 +338,7 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
   memcpy(buffer+4, &message_id,1);
 
   uint32_t network_piece_index = htonl(piece_index);
-  uint32_t network_offset = htonl(piece_index);
+  uint32_t network_offset = htonl(offset);
   uint32_t network_length = htonl(length);
   memcpy(buffer+5, &network_piece_index,4);
   memcpy(buffer+9, &network_offset,4);
@@ -346,7 +349,7 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
 
 }
 
-void download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
+bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
     const uint32_t block_size = 16*1024;
     uint32_t offset = 0;
 
@@ -364,6 +367,7 @@ void download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_l
       PeerMessage message = read_peer_messages(client_socket);
 
 
+
         // Handle keep-alive messages
         if (message.length == 0) {
             std::cout << "Keep-alive message received. Skipping..." << std::endl;
@@ -372,36 +376,34 @@ void download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_l
 
         std::cout << "Message ID received: " << static_cast<int>(message.id) << std::endl;
 
-        if (message.id != 7) {
-            std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
-            continue; // Skip processing and wait for the next message
-        }
-      if(message.id == 7){
+     if (message.id < 0 || message.id > 9) {
+         std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
+         return false;
+     // Skip andwait for the next message
+      }     
+
+    if(message.id == 7){
         // piece message
         uint32_t received_index = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()));
         uint32_t received_begin = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()+4));
 
         std::vector<uint8_t> block(message.payload.begin()+8, message.payload.end());
 
-        if (received_index == piece_index && received_begin == offset){
-          std::copy(block.begin(), block.end(), piece_data.begin()+offset);
-          offset += block.size();
-
-          std::cout << "Received piece index: " << received_index
-          << ", begin: " << received_begin
-          << ", expected offset: " << offset
-          << ", block size: " << block.size() << std::endl;
-        }
-        else {
-                std::cerr << "Invalid block received." << std::endl;
-                break;
-            }
+       if (received_index != piece_index || received_begin != offset) {
+           std::cerr << "Invalid block received. Expected index: " << piece_index
+              << ", offset: " << offset
+              << ", but got index: " << received_index
+              << ", offset: " << received_begin << std::endl;
+        continue; // Reattempt to download the current block
+        }      
       }
       
   //  std::cout << "Length Received: " << message.length << std::endl;
    // std::cout << "Message Id Received: " << static_cast<int>(message.id) << std::endl;
 
   }
+
+  return true;
 }
 
 void handle_peer_messages(SOCKET client_socket, int32_t piece_index, uint32_t piece_length){
@@ -430,8 +432,10 @@ void handle_peer_messages(SOCKET client_socket, int32_t piece_index, uint32_t pi
       case 1:
         // unchoke message;
         std::cout << "Received unchoke message" << std::endl;
-        download_piece(client_socket, piece_index, piece_length );
-
+        if (!download_piece(client_socket, piece_index, piece_length)) {
+                    std::cerr << "Error during piece download. Terminating peer message handling." << std::endl;
+                    return; // Exit the loop if download_piece fails
+                }
       default:
         break;
       }
