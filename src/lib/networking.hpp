@@ -352,7 +352,11 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
 bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
     const uint32_t block_size = 16*1024;
     uint32_t offset = 0;
-
+    
+    std::cout <<"---------Piece Info----------" << std::endl;
+    std::cout <<"Piece Index: " << piece_index << std::endl;
+    std::cout <<"Piece Length: " << piece_length << std::endl;
+    std::cout <<"-----------------------------" << std::endl;
 
     // to store the blocks downloaded
     std::vector<uint8_t> piece_data(piece_length);
@@ -378,26 +382,47 @@ bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_l
 
      if (message.id < 0 || message.id > 9) {
          std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
+
+         // log the invalid message
+        std::cerr << "Message length: " << message.length << std::endl;
+        std::cerr << "Message payload: ";
+
+        for (const auto& byte: message.payload){
+          std::cerr << std::hex << static_cast<int>(byte)<<std::endl;
+        }
          return false;
-     // Skip andwait for the next message
       }     
 
-    if(message.id == 7){
-        // piece message
-        uint32_t received_index = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()));
-        uint32_t received_begin = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()+4));
+      if(message.id == 7){
+          // piece message
+          uint32_t received_index = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()));
+          uint32_t received_begin = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()+4));
 
-        std::vector<uint8_t> block(message.payload.begin()+8, message.payload.end());
+          std::vector<uint8_t> block(message.payload.begin()+8, message.payload.end());
 
-       if (received_index != piece_index || received_begin != offset) {
-           std::cerr << "Invalid block received. Expected index: " << piece_index
-              << ", offset: " << offset
-              << ", but got index: " << received_index
-              << ", offset: " << received_begin << std::endl;
-        continue; // Reattempt to download the current block
-        }      
-      }
-      
+           if (received_index == piece_index && received_begin == offset) {
+              // Store the block in the piece_data buffer
+              std::copy(block.begin(), block.end(), piece_data.begin() + offset);
+
+              // Update the offset to move to the next block
+              offset += block.size();
+
+              std::cout << "-----Block Received---" << std::endl;
+              std::cout << "Received Index: " << received_index << std::endl;
+              std::cout << "Received Begin: " << received_begin << std::endl;
+              std::cout << "Offset : " << offset << std::endl;
+              std::cout << "Block Size: " << block.size() << std::endl;
+              std::cout << "----------------------" << std::endl;
+          } else {
+              std::cerr << "Invalid block received. Expected index: " << piece_index
+                        << ", offset: " << offset
+                        << ", but got index: " << received_index
+                        << ", offset: " << received_begin << std::endl;
+              continue; // Reattempt to download the current block
+          }    
+        
+    }
+        
   //  std::cout << "Length Received: " << message.length << std::endl;
    // std::cout << "Message Id Received: " << static_cast<int>(message.id) << std::endl;
 
@@ -406,7 +431,7 @@ bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_l
   return true;
 }
 
-void handle_peer_messages(SOCKET client_socket, int32_t piece_index, uint32_t piece_length){
+void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
   std::cout << "Piece Length" << piece_length << std::endl;
 
   while(true){
