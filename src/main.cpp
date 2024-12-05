@@ -2,6 +2,7 @@
 #include<string>
 #include<fstream>
 #include<iomanip>
+#include<cmath>
 #include <sstream>
 #include<random>
 #include "lib/nlohmann/json.hpp"
@@ -41,6 +42,10 @@ int main(int argc, char* argv[]){
 
       std::string peer_id = generate_peer_id();
       std::cout <<"Peer ID: "<<peer_id<<std::endl;
+
+ // Extract file name from torrent metadata
+      std::string output_file_name = decoded_value["info"]["name"].get<std::string>();
+      std::cout << "Output File Name: " << output_file_name << std::endl;
       // peer peer_discovery
       Torrent torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
       std::vector<std::string> peers = peer_discovery(base_url,torrent);
@@ -66,18 +71,30 @@ int main(int argc, char* argv[]){
         return -1;
       }
       
-      std::optional<std::vector<uint8_t>> downloaded_piece = handle_download_pieces(client_socket, 0,static_cast<uint32_t>(decoded_value["info"]["piece length"].get<int>()) );
-      if(downloaded_piece){
+        
+      std::vector<uint8_t> file_data = handle_download_pieces(client_socket,
+          decoded_value["info"]["length"].get<int>(),
+          decoded_value["info"]["piece length"].get<int>(),
+          piece_hash);
 
-        std::string computed_hash = bytes_to_hash(*downloaded_piece);
-        std::string expected_hash = piece_hash.substr(0,0+40);
-        if(computed_hash == expected_hash){
-          std::cout << "Hash Validated" << std::endl;
-        }
-        else{
-          std::cout << "Hash Invalid" << std::endl;
-        }
+      if(file_data.empty()){
+        std::cerr << "Failed to download file" << std::endl;
+        return -1;
       }
+
+      // save the file
+      std::ofstream output_file(output_file_name, std::ios::binary);
+      if(!output_file){
+        std::cerr << "Failed to open file for writing: " << output_file_name << std::endl;
+      }
+
+      output_file.write(reinterpret_cast<const char*>(file_data.data()), file_data.size());
+
+      output_file.close();
+
+      std::cout << "File saved successfully as " << output_file_name << std::endl;
+
+
     }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
