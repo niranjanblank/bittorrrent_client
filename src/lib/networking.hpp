@@ -431,9 +431,12 @@ std::optional<std::vector<uint8_t>> download_piece(SOCKET client_socket, uint32_
   return piece_data;
 }
 
-void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
-  std::cout << "Piece Length" << piece_length << std::endl;
 
+std::optional<std::vector<uint8_t>> handle_download_pieces(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
+  std::cout << "Piece Length" << piece_length << std::endl;
+  
+  std::optional<std::vector<uint8_t>> piece_data;
+  //std::string piece_data_string;
   while(true){
    PeerMessage message = read_peer_messages(client_socket);
 
@@ -445,8 +448,7 @@ void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t p
 
     // process peer messages 
     std::cout << "Processing messaage ID:" << static_cast<int>(message.id) << std::endl;
-    std::optional<std::vector<uint8_t>> piece_data;
-    std::string piece_data_string;
+
    switch(message.id){
       case 0: // Choke message
           std::cout << "Received choke message. Cannot request pieces until unchoked." << std::endl;
@@ -463,17 +465,24 @@ void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t p
         piece_data = download_piece(client_socket, piece_index, piece_length);
         if(!piece_data){
           std::cerr << "Error downloading piece data at index "<< piece_index << ". Terminating peer message handling" << std::endl;
-          return;
+          return std::nullopt;
         }
 
         // piece data downloaded 
         std::cout << "Piece downloaded successfully, size: " << piece_data->size() <<" bytes."<<std::endl;
-        piece_data_string = std::string(reinterpret_cast<const char*>(piece_data->data()), piece_data->size());
-        std::cout << "Piece Hash: " << sha1_hash(piece_data_string)<<std::endl;
+        //piece_data_string = std::string(reinterpret_cast<const char*>(piece_data->data()), piece_data->size());
+        //std::cout << "Piece Hash: " << sha1_hash(piece_data_string)<<std::endl;
         break;  
       default:
         break;
       }
+  
+      // Check if the piece has been fully downloaded
+        if (piece_data && piece_data->size() == piece_length) {
+            break;
+        }
+    }
 
-      }
+
+  return piece_data;
 }

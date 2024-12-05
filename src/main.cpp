@@ -66,8 +66,18 @@ int main(int argc, char* argv[]){
         return -1;
       }
       
-      handle_peer_messages(client_socket, 0,static_cast<uint32_t>(decoded_value["info"]["piece length"].get<int>()) );
-      
+      std::optional<std::vector<uint8_t>> downloaded_piece = handle_download_pieces(client_socket, 0,static_cast<uint32_t>(decoded_value["info"]["piece length"].get<int>()) );
+      if(downloaded_piece){
+
+        std::string computed_hash = bytes_to_hash(*downloaded_piece);
+        std::string expected_hash = piece_hash.substr(0,0+40);
+        if(computed_hash == expected_hash){
+          std::cout << "Hash Validated" << std::endl;
+        }
+        else{
+          std::cout << "Hash Invalid" << std::endl;
+        }
+      }
     }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;

@@ -42,6 +42,11 @@ std::vector<uint8_t> hex_to_bytes(const std::string hex) {
   return bytes;
 }
 
+std::string bytes_to_hash(const std::vector<uint8_t>& bytes){
+  std::string data(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+  return sha1_hash(data);
+}
+
 std::string generate_peer_id(){
   const std::string prefix =  "-MY1000-"; // 8 bytes
   const int peer_id_length = 20;
