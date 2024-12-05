@@ -349,7 +349,7 @@ void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t o
 
 }
 
-bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
+std::optional<std::vector<uint8_t>> download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
     const uint32_t block_size = 16*1024;
     uint32_t offset = 0;
     
@@ -390,7 +390,7 @@ bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_l
         for (const auto& byte: message.payload){
           std::cerr << std::hex << static_cast<int>(byte)<<std::endl;
         }
-         return false;
+         return std::nullopt;
       }     
 
       if(message.id == 7){
@@ -428,7 +428,7 @@ bool download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_l
 
   }
 
-  return true;
+  return piece_data;
 }
 
 void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length){
@@ -445,7 +445,9 @@ void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t p
 
     // process peer messages 
     std::cout << "Processing messaage ID:" << static_cast<int>(message.id) << std::endl;
-    switch(message.id){
+    std::optional<std::vector<uint8_t>> piece_data;
+    std::string piece_data_string;
+   switch(message.id){
       case 0: // Choke message
           std::cout << "Received choke message. Cannot request pieces until unchoked." << std::endl;
           break;
@@ -457,10 +459,18 @@ void handle_peer_messages(SOCKET client_socket, uint32_t piece_index, uint32_t p
       case 1:
         // unchoke message;
         std::cout << "Received unchoke message" << std::endl;
-        if (!download_piece(client_socket, piece_index, piece_length)) {
-                    std::cerr << "Error during piece download. Terminating peer message handling." << std::endl;
-                    return; // Exit the loop if download_piece fails
-                }
+
+        piece_data = download_piece(client_socket, piece_index, piece_length);
+        if(!piece_data){
+          std::cerr << "Error downloading piece data at index "<< piece_index << ". Terminating peer message handling" << std::endl;
+          return;
+        }
+
+        // piece data downloaded 
+        std::cout << "Piece downloaded successfully, size: " << piece_data->size() <<" bytes."<<std::endl;
+        piece_data_string = std::string(reinterpret_cast<const char*>(piece_data->data()), piece_data->size());
+        std::cout << "Piece Hash: " << sha1_hash(piece_data_string)<<std::endl;
+        break;  
       default:
         break;
       }
