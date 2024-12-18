@@ -18,7 +18,7 @@
 
 // Project-Specific Headers
 #include "lib/structures.hpp"
-
+#include "lib/TorrentParser/TorrentParser.hpp"
 
 // Function for url encoding
 std::string urlEncode(const std::string& value) {
@@ -37,7 +37,7 @@ std::string urlEncode(const std::string& value) {
 }
 // Function for peer discovery
 
-std::vector<std::string> peer_discovery(const std::string& base_url, const Torrent& torrent) {
+std::vector<std::string> peer_discovery(const std::string& base_url, const TorrentFile& torrent) {
   size_t last_index = base_url.find_last_of("/");
 // getting the domain and entry point, as cpp-httplib requires client to be made out of just domain
   std::string domain = base_url.substr(0, last_index);

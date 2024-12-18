@@ -14,15 +14,17 @@
 #include <ws2tcpip.h>// Required for InetPton()                       
 #include "lib/structures.hpp"
 #include "lib/networking.hpp"
+#include "lib/TorrentParser/TorrentParser.hpp"
 #pragma comment(lib, "ws2_32.lib")
-using json = nlohmann::json;
+#include "common.hpp"
+
 
 
 
 int main(int argc, char* argv[]){
   if(argc>1){
     
-    // read torrent file
+    // read rorrent file
   try{
       std::string file_name = argv[1];
       json decoded_value = parse_torrent_file(file_name);
@@ -43,11 +45,19 @@ int main(int argc, char* argv[]){
       std::string peer_id = generate_peer_id();
       std::cout <<"Peer ID: "<<peer_id<<std::endl;
 
+      // TorentParser checker
+      TorrentParser torrent_parser;
+      TorrentFile torrent = torrent_parser.parse(file_name);
+
+      std::cout << "----------Meta Data----------" << std::endl;
+      std::cout << "Tracker URL: "<< decoded_value["announce"].get<std::string>()<<std::endl;
+
+
  // Extract file name from torrent metadata
       std::string output_file_name = decoded_value["info"]["name"].get<std::string>();
       std::cout << "Output File Name: " << output_file_name << std::endl;
       // peer peer_discovery
-      Torrent torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
+      //TorrentFile torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
       std::vector<std::string> peers = peer_discovery(base_url,torrent);
       for (std::string address: peers){
         std::cout << address << std::endl;
@@ -73,8 +83,8 @@ int main(int argc, char* argv[]){
       
         
       std::vector<uint8_t> file_data = handle_download_pieces(client_socket,
-          decoded_value["info"]["length"].get<int>(),
-          decoded_value["info"]["piece length"].get<int>(),
+          torrent.total_length,
+          torrent.piece_length,
           piece_hash);
 
       if(file_data.empty()){
