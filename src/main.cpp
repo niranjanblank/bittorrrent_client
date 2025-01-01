@@ -15,6 +15,7 @@
 #include "lib/structures.hpp"
 #include "lib/networking.hpp"
 #include "lib/TorrentParser/TorrentParser.hpp"
+#include "lib/SocketManager.hpp"
 #pragma comment(lib, "ws2_32.lib")
 #include "common.hpp"
 
@@ -62,12 +63,19 @@ int main(int argc, char* argv[]){
       for (std::string address: peers){
         std::cout << address << std::endl;
       }
+
       
       // initialize tcp server
-      SOCKET client_socket = initialize_socket("165.232.41.73", 51556);
-      if (client_socket == INVALID_SOCKET) {
-        return -1;
-      }
+      
+      SocketManager socketManager;
+      socketManager.connectToServer("165.232.41.73", 51556);
+      SOCKET client_socket = socketManager.getClientSocket();
+
+      
+     // SOCKET client_socket = initialize_socket("165.232.41.73", 51556);
+      //if (client_socket == INVALID_SOCKET) {
+       // return -1;
+      //}
 
       // handshake
       std::string handshake = create_handshake(info_hash, peer_id);
@@ -76,9 +84,10 @@ int main(int argc, char* argv[]){
       //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
       //
       if (!handshake_received){
-        std::cerr << "Handshake failed" << std::endl;
-        cleanup_socket(client_socket);
-        return -1;
+        std::runtime_error("Handshake failed");
+
+       // cleanup_socket(client_socket);
+       // return -1;
       }
       
         

@@ -111,6 +111,7 @@ std::vector<std::string> peer_discovery(const std::string& base_url, const Torre
   return peers;  // Return the JSON response object
 }
 
+/**
 // initialize socket
 SOCKET initialize_socket(const std::string& peer_ip, unsigned short peer_port){
  WSADATA wsaData;
@@ -163,6 +164,7 @@ void cleanup_socket(SOCKET client_socket){
   closesocket(client_socket);
   WSACleanup();
 }
+**/
 
 // function for handshake
 std::string create_handshake(const std::string& info_hash, const std::string& peer_id){
