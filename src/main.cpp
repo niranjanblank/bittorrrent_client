@@ -16,6 +16,7 @@
 #include "lib/networking.hpp"
 #include "lib/TorrentParser/TorrentParser.hpp"
 #include "lib/SocketManager.hpp"
+#include "lib/PeerDiscovery.hpp"
 #pragma comment(lib, "ws2_32.lib")
 #include "common.hpp"
 
@@ -59,11 +60,14 @@ int main(int argc, char* argv[]){
       std::cout << "Output File Name: " << output_file_name << std::endl;
       // peer peer_discovery
       //TorrentFile torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
-      std::vector<std::string> peers = peer_discovery(base_url,torrent);
-      for (std::string address: peers){
-        std::cout << address << std::endl;
-      }
-
+      // discover the peers from where we can download the file using the url from torrent file
+      PeerDiscovery peerDiscovery(torrent);
+      std::vector<Peer> peers = peerDiscovery.discoverPeers();
+      
+        std::cout << "Discovered Peers:" << std::endl;
+        for (const Peer& peer : peers) {
+            std::cout << "IP: " << peer.ip << ", Port: " << peer.port << std::endl;
+        }
       
       // initialize tcp server
       
