@@ -17,6 +17,7 @@
 #include "lib/TorrentParser/TorrentParser.hpp"
 #include "lib/SocketManager.hpp"
 #include "lib/PeerDiscovery.hpp"
+#include "lib/HandshakeHandler.hpp"
 #pragma comment(lib, "ws2_32.lib")
 #include "common.hpp"
 
@@ -76,23 +77,13 @@ int main(int argc, char* argv[]){
       SOCKET client_socket = socketManager.getClientSocket();
 
       
-     // SOCKET client_socket = initialize_socket("165.232.41.73", 51556);
-      //if (client_socket == INVALID_SOCKET) {
-       // return -1;
-      //}
-
-      // handshake
-      std::string handshake = create_handshake(info_hash, peer_id);
-      
-      auto handshake_received = send_handshake(handshake, client_socket);
+      // initialize handshake handler
+      HandshakeHandler handshake_handler(info_hash, peer_id);
+     // std::string handshake = handshake_handler.create_handshake();
+     // handshake will be created and sent from send_handshake 
+      auto handshake_received = handshake_handler.send_handshake(client_socket);
       //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
-      //
-      if (!handshake_received){
-        std::runtime_error("Handshake failed");
-
-       // cleanup_socket(client_socket);
-       // return -1;
-      }
+     
       
         
       std::vector<uint8_t> file_data = handle_download_pieces(client_socket,
