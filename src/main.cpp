@@ -13,11 +13,14 @@
 #include<winsock2.h>
 #include <ws2tcpip.h>// Required for InetPton()                       
 #include "lib/structures.hpp"
-#include "lib/networking.hpp"
+//#include "lib/networking.hpp"
 #include "lib/TorrentParser/TorrentParser.hpp"
 #include "lib/SocketManager.hpp"
 #include "lib/PeerDiscovery.hpp"
 #include "lib/HandshakeHandler.hpp"
+#include "lib/PieceDownloader.hpp"
+#include "lib/PeerMessageHandler.hpp"
+
 #pragma comment(lib, "ws2_32.lib")
 #include "common.hpp"
 
@@ -83,14 +86,20 @@ int main(int argc, char* argv[]){
      // handshake will be created and sent from send_handshake 
       auto handshake_received = handshake_handler.send_handshake(client_socket);
       //st165.232.41.73:51556d::cout << "Handshake message: " << handshake << std::endl;
-     
+    
+      PeerMessageHandler message_handler(client_socket);
+      PieceDownloader downloader(client_socket, message_handler);
       
         
-      std::vector<uint8_t> file_data = handle_download_pieces(client_socket,
-          torrent.total_length,
-          torrent.piece_length,
-          piece_hash);
+      //std::vector<uint8_t> file_data = handle_download_pieces(client_socket,
+        //  torrent.total_length,
+          //torrent.piece_length,
+          //piece_hash);
 
+
+      std::vector<uint8_t> file_data = downloader.handle_download_pieces(
+                client_socket, torrent.total_length, torrent.piece_length, piece_hash);
+      
       if(file_data.empty()){
         std::cerr << "Failed to download file" << std::endl;
         return -1;

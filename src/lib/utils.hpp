@@ -108,3 +108,22 @@ json parse_torrent_file(std::string& file_name){
    
 }
 
+
+// read exact number of bytes from socket
+int read_exact_bytes(SOCKET socket, char* buffer, int bytes_to_read){
+  int total_bytes_read = 0;
+// we keep on reading from the stream until we have rearched our required bytes
+  while(total_bytes_read < bytes_to_read){
+    int bytes_read = recv(socket,buffer+total_bytes_read,bytes_to_read - total_bytes_read,0);
+
+    if (bytes_read <=0){
+      // connection closed or errorr occured
+      throw std::runtime_error("Connection closed or errorr during recv");
+    }
+
+    total_bytes_read += bytes_read;
+  }
+
+  return total_bytes_read;
+}
+
