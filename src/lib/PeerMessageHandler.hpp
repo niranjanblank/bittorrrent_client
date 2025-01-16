@@ -1,4 +1,3 @@
-
 #pragma once
 #include <iostream>
 #include <string>
@@ -55,16 +54,35 @@ class PeerMessageHandler{
 
     // handling each message
     void handle_bit_field(const PeerMessage& message){
-      std::cout << "Bitfield message received" << std::endl;
+      std::cout << "-----------Bitfield message received----------" << std::endl;
       // ignore bitfield for now
-      /*
-        for(size_t i=0; i < message.payload.size(); i++){
+      // clear any existing piece availability information
+      piece_availability_.clear();
+
+      // process each byte in the payload
+      for(size_t i=0; i < message.payload.size(); i++){
+          // convert byte to 8 bits
           std::bitset<8> bits(message.payload[i]);
           std::cout << "Byte " << i << ":" << bits << std::endl; 
-        }
-      */
-      // process the bits to determine piece availability
-      //for (int bit = 7; bit >=0; bit --)
+          
+          // add each bit to piece availability vector (MSB to LSB)
+          for (int bit=7; bit>=0; bit--){
+            piece_availability_.push_back(bits[bit]);
+          }
+
+      }
+      
+      std::cout << "Bitfield: ";
+      for (size_t i = 0; i < piece_availability_.size(); ++i) {
+          std::cout << (piece_availability_[i] ? '1' : '0');
+      }
+      std::cout << std::endl;
+      std::cout << "Peer has the following pieces available: ";
+      for (auto piece_index: get_available_pieces()){
+          std::cout << piece_index << " "; 
+      }
+      std::cout << std::endl << "--------------------------------------" << std::endl;
+
     }
 
   void send_interested(){
@@ -79,6 +97,23 @@ class PeerMessageHandler{
     std::cout << "Interested message sent" << std::endl;
 
     }
+
+  bool has_piece(size_t index) const{
+    return index < piece_availability_.size() && piece_availability_[index];
+  }
+
+  // get index of all the available pieces
+  std::vector<size_t> get_available_pieces() const{
+    std::vector<size_t> available_pieces;
+    for(size_t i=0; i < piece_availability_.size();i++){
+      if (piece_availability_[i]){
+        available_pieces.push_back(i);
+      }
+    }
+    return available_pieces;
+  }
+
   private:
     SOCKET client_socket;
+    std::vector<bool> piece_availability_;
 };
