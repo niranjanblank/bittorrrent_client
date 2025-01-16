@@ -72,14 +72,58 @@ int main(int argc, char* argv[]){
         for (const Peer& peer : peers) {
             std::cout << "IP: " << peer.ip << ", Port: " << peer.port << std::endl;
         }
-      
-      // initialize tcp server
-      
-      SocketManager socketManager;
-      socketManager.connectToServer("165.232.41.73", 51556);
-      SOCKET client_socket = socketManager.getClientSocket();
+     
 
+      // create handlers fo each peer along with their sockets
+
+      std::vector<std::unique_ptr<PeerMessageHandler>> peer_handlers;
       
+      // maps peer index to available pieces
+      std::unordered_map<int, std::vector<size_t>> peer_to_pieces;
+
+      for (size_t i = 0; i < peers.size(); i++) {
+        // creating peer handlers
+        if(i<5){
+          continue;
+        }
+        std::cout << "Creating Peer Handlers: " << i << std::endl;
+        SocketManager socketManager;
+        socketManager.connectToServer(peers[i].ip, peers[i].port);
+        SOCKET client_socket = socketManager.getClientSocket();
+
+        // perform handshake
+      // initialize handshake handler
+      HandshakeHandler handshake_handler(info_hash, peer_id);
+     // std::string handshake = handshake_handler.create_handshake();
+     // handshake will be created and sent from send_handshake 
+      auto handshake_received = handshake_handler.send_handshake(client_socket);
+
+      // create peer handler
+      auto handler = std::make_unique<PeerMessageHandler>(client_socket);
+
+      // read and handle bitfields
+      PeerMessage message = handler->read_peer_messages();
+      if (message.id == 5) { // Bitfield message
+              handler->handle_bit_field(message);
+              handler->send_interested();
+
+              // Save available pieces for this peer
+              peer_to_pieces[i] = handler->get_available_pieces();
+          }
+
+       peer_handlers.push_back(std::move(handler));
+      std::cout << "Handshake and bitfield processing successful with peer " << peers[i].ip << std::endl;
+
+      }
+      // initialize tcp server
+ 
+      
+      if (peer_handlers.empty()) {
+            std::cerr << "No valid peer connections established." << std::endl;
+            return -1;
+        }
+      
+      /*
       // initialize handshake handler
       HandshakeHandler handshake_handler(info_hash, peer_id);
      // std::string handshake = handshake_handler.create_handshake();
@@ -116,7 +160,7 @@ int main(int argc, char* argv[]){
       output_file.close();
 
       std::cout << "File saved successfully as " << output_file_name << std::endl;
-
+    */
 
     }
     catch(const std::exception& e){

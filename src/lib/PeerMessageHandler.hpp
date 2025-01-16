@@ -113,6 +113,11 @@ class PeerMessageHandler{
     return available_pieces;
   }
 
+  SOCKET get_socket() const {
+    return client_socket;
+  }
+
+
   private:
     SOCKET client_socket;
     std::vector<bool> piece_availability_;
