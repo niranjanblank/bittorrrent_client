@@ -127,3 +127,33 @@ int read_exact_bytes(SOCKET socket, char* buffer, int bytes_to_read){
   return total_bytes_read;
 }
 
+
+// generate the number of pieces, their length and their hash
+ 
+std::vector<PieceInfo> generate_piece_metadata(int total_length, int piece_length, const std::string& piece_hashes) {
+    const size_t hash_length = 20; // Each SHA-1 hash is 20 bytes
+    if (piece_hashes.size() % hash_length != 0) {
+        throw std::runtime_error("Invalid piece_hash size. Not a multiple of 20.");
+    }
+
+    std::vector<PieceInfo> metadata;
+    int total_pieces = static_cast<int>(std::ceil(static_cast<double>(total_length) / piece_length));
+
+    //size_t total_pieces = piece_hashes.size() / hash_length;
+
+
+    for (size_t i = 0; i < total_pieces; ++i) {
+        uint32_t current_piece_length = (i == total_pieces - 1) 
+            ? total_length % piece_length 
+            : piece_length;
+
+        //if (current_piece_length == 0) current_piece_length = piece_length;
+            std::string hash = piece_hashes.substr(i * hash_length, hash_length);
+            PieceInfo piece_info = {static_cast<uint32_t>(i), static_cast<uint32_t>(current_piece_length), hash};
+
+          metadata.push_back(piece_info);    
+    }
+
+    return metadata;
+}
+

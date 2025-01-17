@@ -62,6 +62,20 @@ int main(int argc, char* argv[]){
  // Extract file name from torrent metadata
       std::string output_file_name = decoded_value["info"]["name"].get<std::string>();
       std::cout << "Output File Name: " << output_file_name << std::endl;
+      
+      // piece info of each piece
+      std::vector<PieceInfo> piece_metadata;
+      piece_metadata = generate_piece_metadata(torrent.total_length, torrent.piece_length, torrent.piece_hash);
+
+      
+    std::cout << "-------- Piece Metadata --------" << std::endl;
+    for (auto piece : piece_metadata) {
+        std::cout << "Piece Index: " << piece.piece_index
+                  << ", Length: " << piece.piece_length
+                  << ", Hash: " << piece.piece_hash << std::endl;
+    }
+    std::cout << "--------------------------------" << std::endl;
+
       // peer peer_discovery
       //TorrentFile torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
       // discover the peers from where we can download the file using the url from torrent file
@@ -84,7 +98,9 @@ int main(int argc, char* argv[]){
       for (size_t i = 0; i < peers.size(); i++) {
         try{
 
-  
+        if (peer_handlers.size() >= 5){
+          break;
+        } 
         // creating peer handlers
         //if(i<5){
           //continue;
@@ -132,6 +148,8 @@ int main(int argc, char* argv[]){
             std::cerr << "No valid peer connections established." << std::endl;
             return -1;
       }
+     
+      // getting all the piece_index, along with their length and index
       
       /*
       // initialize handshake handler

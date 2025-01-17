@@ -15,11 +15,11 @@
 
 class PieceDownloader {
 public:
-    PieceDownloader(SOCKET client_socket, PeerMessageHandler& message_handler)
-        : client_socket_(client_socket), message_handler_(message_handler) {}
+    PieceDownloader(PeerMessageHandler& message_handler)
+        : message_handler_(message_handler) {}
 
     // send request message to server for downloading a specific block of a piece
-    void send_request_message(SOCKET client_socket, uint32_t piece_index, uint32_t offset, uint32_t length) {
+    void send_request_message(uint32_t piece_index, uint32_t offset, uint32_t length) {
         uint32_t length_prefix = htonl(13); // message_id:1 byte, payload: 12 bytes
         uint8_t message_id = 6; // 6 is for request
 
@@ -35,12 +35,12 @@ public:
         memcpy(buffer + 9, &network_offset, 4);
         memcpy(buffer + 13, &network_length, 4);
 
-        send(client_socket, buffer, sizeof(buffer), 0);
+        send(message_handler_.get_socket(), buffer, sizeof(buffer), 0);
         std::cout << "Request Message sent" << std::endl;
     }
 
     // download a single piece from the server
-    std::optional<std::vector<uint8_t>> download_piece(SOCKET client_socket, uint32_t piece_index, uint32_t piece_length) {
+    std::optional<std::vector<uint8_t>> download_piece(uint32_t piece_index, uint32_t piece_length) {
         const uint32_t block_size = 16 * 1024;
         uint32_t offset = 0;
 
@@ -57,7 +57,7 @@ public:
             uint32_t current_block_size = std::min(block_size, piece_length - offset);
 
             // send request to the server
-            send_request_message(client_socket, piece_index, offset, current_block_size);
+            send_request_message(piece_index, offset, current_block_size);
 
             PeerMessage message = message_handler_.read_peer_messages();
 
@@ -116,9 +116,10 @@ public:
     }
 
     // handle downloading all pieces from the server
-    std::vector<uint8_t> handle_download_pieces(SOCKET client_socket, int total_length, int piece_length, const std::string& piece_hash) {
+  std::optional<std::vector<uint8_t>>handle_download_pieces(int piece_index, int piece_length, const std::string& piece_hash) {
         // buffer to hold the entire data
-        std::vector<uint8_t> file_data(total_length, 0);
+      /*
+      std::vector<uint8_t> file_data(total_length, 0);
         size_t accumulated_size = 0; // Tracks the current write position in the file buffer
 
         // get total pieces
@@ -129,6 +130,9 @@ public:
         int bytes_to_send = piece_length;
 
         std::optional<std::vector<uint8_t>> piece_data;
+        */
+        std::optional<std::vector<uint8_t>> piece_data;
+        std::string computed_hash;
         while (true) {
             PeerMessage message = message_handler_.read_peer_messages();
 
@@ -154,8 +158,32 @@ public:
 
                 case 1:
                     // unchoke message;
-                    std::cout << "Received unchoke message" << std::endl;
+                    std::cout << "Received unchoke message. Starting download for piece" << std::endl;
+                    
+                    // download the piece from piece_index
+                    //
+                    piece_data = download_piece(piece_index, piece_length);
+                    if (!piece_data) {
+                            std::cerr << "Error downloading piece data at index " << piece_index << ". Terminating peer message handling." << std::endl;
+                            return std::nullopt;
 
+                        }
+
+                    // validate the hash
+                    computed_hash = bytes_to_hash(*piece_data);
+                    //std::string expected_hash = piece_hash.substr(i * 40, 40);
+                    if (computed_hash == piece_hash) {
+                        std::cout << "Hash Validated" << std::endl;
+                    } else {
+                        std::cerr << "Invalid Hash" << std::endl;
+                       return std::nullopt;                    }
+
+                    // piece data downloaded
+                    std::cout << "Piece downloaded successfully, size: " << piece_data->size() << " bytes." << std::endl;
+
+                    return piece_data;
+
+                    /*
                     // download all the pieces
                     for (int i = 0; i < total_pieces; i++) {
                         int bytes_sent = (i + 1) * piece_length;
@@ -195,7 +223,8 @@ public:
                         accumulated_size += copy_length;
                         std::cout << "Piece " << i << " added to the buffer" << std::endl;
                     }
-                    return file_data;
+                    */
+                   // return file_data;
 
                 default:
                     std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
@@ -205,7 +234,7 @@ public:
     }
 
 private:
-    SOCKET client_socket_;
+//    SOCKET client_socket_;
     PeerMessageHandler& message_handler_;
 };
 
