@@ -116,7 +116,7 @@ public:
     }
 
     // handle downloading all pieces from the server
-  std::optional<std::vector<uint8_t>>handle_download_pieces(int piece_index, int piece_length, const std::string& piece_hash) {
+  std::optional<std::vector<uint8_t>>handle_download_pieces(uint32_t piece_index, uint32_t piece_length, const std::string& piece_hash) {
         // buffer to hold the entire data
       /*
       std::vector<uint8_t> file_data(total_length, 0);

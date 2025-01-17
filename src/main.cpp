@@ -67,12 +67,11 @@ int main(int argc, char* argv[]){
       std::vector<PieceInfo> piece_metadata;
       piece_metadata = generate_piece_metadata(torrent.total_length, torrent.piece_length, torrent.piece_hash);
 
-      
     std::cout << "-------- Piece Metadata --------" << std::endl;
     for (auto piece : piece_metadata) {
         std::cout << "Piece Index: " << piece.piece_index
                   << ", Length: " << piece.piece_length
-                  << ", Hash: " << piece.piece_hash << std::endl;
+                  << ", Hash: " << to_hex(piece.piece_hash) << std::endl;
     }
     std::cout << "--------------------------------" << std::endl;
 
@@ -98,9 +97,7 @@ int main(int argc, char* argv[]){
       for (size_t i = 0; i < peers.size(); i++) {
         try{
 
-        if (peer_handlers.size() >= 5){
-          break;
-        } 
+  
         // creating peer handlers
         //if(i<5){
           //continue;
@@ -124,7 +121,7 @@ int main(int argc, char* argv[]){
         PeerMessage message = handler->read_peer_messages();
         if (message.id == 5) { // Bitfield message
                 handler->handle_bit_field(message);
-                handler->send_interested();
+               // handler->send_interested();
 
                 // Save available pieces for this peer
                 peer_to_pieces[i] = handler->get_available_pieces();
@@ -148,7 +145,17 @@ int main(int argc, char* argv[]){
             std::cerr << "No valid peer connections established." << std::endl;
             return -1;
       }
-     
+    
+ peer_handlers[0]->send_interested();
+   for (auto piece : piece_metadata) {
+     PieceDownloader pieceDownloader(*peer_handlers[0]);
+    pieceDownloader.download_piece(piece.piece_index, piece.piece_length);
+        std::cout << "Piece Index: " << piece.piece_index
+                  << ", Length: " << piece.piece_length
+                  << ", Hash: " << to_hex(piece.piece_hash) << std::endl;
+    }
+    std::cout << "--------------------------------" << std::endl;
+
       // getting all the piece_index, along with their length and index
       
       /*

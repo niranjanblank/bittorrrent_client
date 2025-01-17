@@ -131,7 +131,7 @@ int read_exact_bytes(SOCKET socket, char* buffer, int bytes_to_read){
 // generate the number of pieces, their length and their hash
  
 std::vector<PieceInfo> generate_piece_metadata(int total_length, int piece_length, const std::string& piece_hashes) {
-    const size_t hash_length = 20; // Each SHA-1 hash is 20 bytes
+    const size_t hash_length = 40; // Each SHA-1 hash is 20 bytes
     if (piece_hashes.size() % hash_length != 0) {
         throw std::runtime_error("Invalid piece_hash size. Not a multiple of 20.");
     }
