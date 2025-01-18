@@ -26,7 +26,7 @@ class PeerMessageHandler{
           // checking if the mssagte is keep alive message
           if (message.length == 0) {
                 std::cout << "Received keep-alive message." << std::endl;
-                message.id = 0; 
+                //message.id = 0; 
                 return message; // Continue without processing further
             }
 
@@ -117,8 +117,17 @@ class PeerMessageHandler{
     return client_socket;
   }
 
+  void set_choked(bool val){
+    is_choked = val;
+  }
+
+  bool get_choked(){
+    return is_choked;
+  }
+
 
   private:
     SOCKET client_socket;
     std::vector<bool> piece_availability_;
+    bool is_choked;
 };

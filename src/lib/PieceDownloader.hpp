@@ -82,6 +82,11 @@ public:
                 return std::nullopt;
             }
 
+            if (message.id == 0){
+              std::cerr << "Choke Message Received: Severing connection to the Peer" << std::endl;
+              return std::nullopt;
+            }
+
             if (message.id == 7) {
                 // piece message
                 uint32_t received_index = ntohl(*reinterpret_cast<uint32_t*>(message.payload.data()));
@@ -114,6 +119,35 @@ public:
 
         return piece_data;
     }
+
+  std::optional<std::vector<uint8_t>> handle_download_piece(uint32_t piece_index, uint32_t piece_length, const std::string& piece_hash){
+    std::optional<std::vector<uint8_t>> piece_data;
+
+    if(!message_handler_.get_choked()){
+      // download the piece
+      piece_data = download_piece(piece_index, piece_length);
+
+      if (!piece_data) {
+              std::cerr << "Error downloading piece data at index " << piece_index << ". Terminating peer message handling." << std::endl;
+              return std::nullopt;    
+      }
+
+      computed_hash = bytes_to_hash(*piece_data);
+      //std::string expected_hash = piece_hash.substr(i * 40, 40);
+      if (computed_hash == piece_hash) {
+          std::cout << "hash validated" << std::endl;
+      } else {
+          std::cerr << "invalid hash" << std::endl;
+          return std::nullopt;                    }
+
+      // piece data downloaded
+      std::cout << "piece downloaded successfully, size: " << piece_data->size() << " bytes." << std::endl;
+
+      return piece_data;
+    }
+
+    return std::nullopt;
+  }
 
     // handle downloading all pieces from the server
   std::optional<std::vector<uint8_t>>handle_download_pieces(uint32_t piece_index, uint32_t piece_length, const std::string& piece_hash) {
