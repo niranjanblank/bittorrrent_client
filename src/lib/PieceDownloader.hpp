@@ -120,7 +120,8 @@ public:
         return piece_data;
     }
 
-  std::optional<std::vector<uint8_t>> handle_download_piece(uint32_t piece_index, uint32_t piece_length, const std::string& piece_hash){
+  std::optional<std::vector<uint8_t>> handle_download_piece(uint32_t piece_index, 
+      uint32_t piece_length, const std::string& piece_hash){
     std::optional<std::vector<uint8_t>> piece_data;
 
     if(!message_handler_.get_choked()){
@@ -132,7 +133,7 @@ public:
               return std::nullopt;    
       }
 
-      computed_hash = bytes_to_hash(*piece_data);
+      std::string computed_hash = bytes_to_hash(*piece_data);
       //std::string expected_hash = piece_hash.substr(i * 40, 40);
       if (computed_hash == piece_hash) {
           std::cout << "hash validated" << std::endl;

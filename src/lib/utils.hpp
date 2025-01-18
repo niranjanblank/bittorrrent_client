@@ -147,7 +147,7 @@ std::vector<PieceInfo> generate_piece_metadata(int total_length, int piece_lengt
             ? total_length % piece_length 
             : piece_length;
 
-        //if (current_piece_length == 0) current_piece_length = piece_length;
+        if (current_piece_length == 0) current_piece_length = piece_length;
             std::string hash = piece_hashes.substr(i * hash_length, hash_length);
             PieceInfo piece_info = {static_cast<uint32_t>(i), static_cast<uint32_t>(current_piece_length), hash};
 

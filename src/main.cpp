@@ -25,7 +25,34 @@
 #include "common.hpp"
 
 
+void save_piece_to_file(const std::string& file_path, uint32_t piece_index, const std::vector<uint8_t>& piece_data, uint32_t piece_length) {
+    // Open the file in binary mode with read/write and append disabled
+    std::ofstream file(file_path, std::ios::binary | std::ios::in | std::ios::out);
+    if (!file) {
+        // Create the file if it does not exist
+        file.open(file_path, std::ios::binary | std::ios::out);
+        if (!file) {
+            throw std::runtime_error("Failed to open or create file: " + file_path);
+        }
+    }
 
+    // Calculate the offset for the piece
+    uint64_t offset = static_cast<uint64_t>(piece_index) * piece_length;
+
+    // Seek to the correct offset
+    file.seekp(offset);
+    if (!file) {
+        throw std::runtime_error("Failed to seek to offset " + std::to_string(offset) + " in file: " + file_path);
+    }
+
+    // Write the piece data
+    file.write(reinterpret_cast<const char*>(piece_data.data()), piece_data.size());
+    if (!file) {
+        throw std::runtime_error("Failed to write piece data to file at offset " + std::to_string(offset));
+    }
+
+    file.close();
+}
 
 int main(int argc, char* argv[]){
   if(argc>1){
@@ -94,6 +121,8 @@ int main(int argc, char* argv[]){
       // maps peer index to available pieces
       std::unordered_map<int, std::vector<size_t>> peer_to_pieces;
 
+      /*
+
       for (size_t i = 0; i < peers.size(); i++) {
         try{
 
@@ -145,14 +174,78 @@ int main(int argc, char* argv[]){
             std::cerr << "No valid peer connections established." << std::endl;
             return -1;
       }
-    
- peer_handlers[0]->send_interested();
+    */
+SocketManager socketManager;
+SOCKET client_socket;
+
+for(size_t i = 0; i<peers.size();i++){
+
+try{
+  socketManager.connectToServer(peers[i].ip, peers[i].port);
+  client_socket = socketManager.getClientSocket();
+      std::cout << "Successfully connected to peer " << i 
+                  << " (IP: " << peers[i].ip 
+                  << ", Port: " << peers[i].port << ")" << std::endl;
+        break; // Exit the loop on successful connection
+
+}
+  catch (const std::exception &e){
+  std::cerr << "Error with peer " << i << " (IP: " << peers[i].ip << ", Port: " << peers[i].port
+                    << "): " << e.what() << std::endl;
+  continue;
+}
+
+}
+
+
+
+HandshakeHandler handshake_handler(info_hash, peer_id);
+      // std::string handshake = handshake_handler.create_handshake();
+      // handshake will be created and sent from send_handshake 
+auto handshake_received = handshake_handler.send_handshake(client_socket);
+
+
+PeerMessageHandler peerHandler = PeerMessageHandler(client_socket);
+  PeerMessage message = peerHandler.read_peer_messages();
+        if (message.id == 5) { // Bitfield message
+                peerHandler.handle_bit_field(message);
+               // handler->send_interested();
+
+                // Save available pieces for this peer
+                //peer_to_pieces[i] = handler->get_available_pieces();
+            }
+
+
+peerHandler.send_interested();
+ message = peerHandler.read_peer_messages();  
+ if(message.id==1){
+   std::cout << "Unchoked" << std::endl;
+   peerHandler.set_choked(false);
+ }
+
+
+ PieceDownloader pieceDownloader(peerHandler);
+
    for (auto piece : piece_metadata) {
-     PieceDownloader pieceDownloader(*peer_handlers[0]);
-    pieceDownloader.download_piece(piece.piece_index, piece.piece_length);
-        std::cout << "Piece Index: " << piece.piece_index
+
+  
+   std::optional<std::vector<uint8_t>> piece_data = pieceDownloader.handle_download_piece(piece.piece_index, piece.piece_length, piece.piece_hash);
+       
+   std::cout << "Piece Index: " << piece.piece_index
                   << ", Length: " << piece.piece_length
-                  << ", Hash: " << to_hex(piece.piece_hash) << std::endl;
+                  << ", Hash: " << piece.piece_hash << std::endl;
+
+          if (piece_data) {
+              try {
+                  save_piece_to_file(output_file_name, piece.piece_index, *piece_data, piece.piece_length);
+                  std::cout << "Piece " << piece.piece_index << " saved to file." << std::endl;
+              } catch (const std::exception& e) {
+                  std::cerr << "Error saving piece " << piece.piece_index << ": " << e.what() << std::endl;
+              }
+            }
+          else {
+                std::cerr << "Failed to download piece " << piece.piece_index << std::endl;
+            }
     }
     std::cout << "--------------------------------" << std::endl;
 

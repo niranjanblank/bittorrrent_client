@@ -13,7 +13,7 @@
 #include "lib/structures.hpp"
 class PeerMessageHandler{
   public:
-    explicit PeerMessageHandler(SOCKET socket): client_socket(socket) {}
+    explicit PeerMessageHandler(SOCKET socket): client_socket(socket), is_choked(false) {}
 
     PeerMessage read_peer_messages(){
           PeerMessage message; 
