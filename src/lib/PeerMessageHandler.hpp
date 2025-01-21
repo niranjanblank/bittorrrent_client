@@ -13,7 +13,7 @@
 #include "lib/structures.hpp"
 class PeerMessageHandler{
   public:
-    explicit PeerMessageHandler(SOCKET socket): client_socket(socket) {}
+    explicit PeerMessageHandler(SOCKET socket): client_socket(socket), is_choked(false) {}
 
     PeerMessage read_peer_messages(){
           PeerMessage message; 
@@ -26,7 +26,7 @@ class PeerMessageHandler{
           // checking if the mssagte is keep alive message
           if (message.length == 0) {
                 std::cout << "Received keep-alive message." << std::endl;
-                message.id = 0; 
+                //message.id = 0; 
                 return message; // Continue without processing further
             }
 
@@ -113,7 +113,21 @@ class PeerMessageHandler{
     return available_pieces;
   }
 
+  SOCKET get_socket() const {
+    return client_socket;
+  }
+
+  void set_choked(bool val){
+    is_choked = val;
+  }
+
+  bool get_choked(){
+    return is_choked;
+  }
+
+
   private:
     SOCKET client_socket;
     std::vector<bool> piece_availability_;
+    bool is_choked;
 };

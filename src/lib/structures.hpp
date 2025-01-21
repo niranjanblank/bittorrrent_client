@@ -32,3 +32,12 @@ struct PeerMessage{
   uint8_t id; // message id
   std::vector<uint8_t> payload;
 };
+
+struct PieceInfo {
+    uint32_t piece_index;
+    uint32_t piece_length;
+    std::string piece_hash;
+  
+    PieceInfo(uint32_t index, uint32_t length, const std::string& hash)
+        : piece_index(index), piece_length(length), piece_hash(hash) {}
+};
