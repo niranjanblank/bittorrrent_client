@@ -152,20 +152,7 @@ public:
 
     // handle downloading all pieces from the server
   std::optional<std::vector<uint8_t>>handle_download_pieces(uint32_t piece_index, uint32_t piece_length, const std::string& piece_hash) {
-        // buffer to hold the entire data
-      /*
-      std::vector<uint8_t> file_data(total_length, 0);
-        size_t accumulated_size = 0; // Tracks the current write position in the file buffer
 
-        // get total pieces
-        int total_pieces = static_cast<int>(std::ceil(static_cast<double>(total_length) / piece_length));
-        std::cout << "Total Pieces: " << total_pieces << std::endl;
-        std::cout << "Piece Length: " << piece_length << std::endl;
-
-        int bytes_to_send = piece_length;
-
-        std::optional<std::vector<uint8_t>> piece_data;
-        */
         std::optional<std::vector<uint8_t>> piece_data;
         std::string computed_hash;
         while (true) {
@@ -218,48 +205,6 @@ public:
 
                     return piece_data;
 
-                    /*
-                    // download all the pieces
-                    for (int i = 0; i < total_pieces; i++) {
-                        int bytes_sent = (i + 1) * piece_length;
-
-                        if (bytes_sent > total_length) {
-                            bytes_to_send = total_length - (i * piece_length);
-                        }
-                        std::cout << "Index: " << i << ", Bytes: " << bytes_to_send << std::endl;
-
-                        // download piece at index
-                        piece_data = download_piece(client_socket, static_cast<uint32_t>(i), static_cast<uint32_t>(bytes_to_send));
-                        if (!piece_data) {
-                            std::cerr << "Error downloading piece data at index " << i << ". Terminating peer message handling." << std::endl;
-                            return {};
-                        }
-
-                        // validate the hash
-                        std::string computed_hash = bytes_to_hash(*piece_data);
-                        std::string expected_hash = piece_hash.substr(i * 40, 40);
-                        if (computed_hash == expected_hash) {
-                            std::cout << "Hash Validated" << std::endl;
-                        } else {
-                            std::cerr << "Invalid Hash" << std::endl;
-                            return {};
-                        }
-
-                        // piece data downloaded
-                        std::cout << "Piece downloaded successfully, size: " << piece_data->size() << " bytes." << std::endl;
-
-                        // copy the downloaded piece to the buffer
-                        size_t copy_length = piece_data->size();
-                        if (accumulated_size + copy_length > file_data.size()) {
-                            std::cerr << "Error: Piece data exceeds file buffer size." << std::endl;
-                            return {}; // Return empty file data on failure
-                        }
-                        std::copy(piece_data->begin(), piece_data->end(), file_data.begin() + accumulated_size);
-                        accumulated_size += copy_length;
-                        std::cout << "Piece " << i << " added to the buffer" << std::endl;
-                    }
-                    */
-                   // return file_data;
 
                 default:
                     std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
