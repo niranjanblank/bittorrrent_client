@@ -150,68 +150,7 @@ public:
     return std::nullopt;
   }
 
-    // handle downloading all pieces from the server
-  std::optional<std::vector<uint8_t>>handle_download_pieces(uint32_t piece_index, uint32_t piece_length, const std::string& piece_hash) {
-
-        std::optional<std::vector<uint8_t>> piece_data;
-        std::string computed_hash;
-        while (true) {
-            PeerMessage message = message_handler_.read_peer_messages();
-
-            // if we encounter keep alive message, we skip processing
-            if (message.length == 0) {
-                std::cout << "Received keep-alive message." << std::endl;
-                continue; // Skip processing for keep-alive
-            }
-
-            // process peer messages
-            std::cout << "Processing message ID: " << static_cast<int>(message.id) << std::endl;
-
-            switch (message.id) {
-                case 0: // Choke message
-                    std::cout << "Received choke message. Cannot request pieces until unchoked." << std::endl;
-                    break;
-
-                case 5:
-                    // bit field message
-                    message_handler_.handle_bit_field(message);
-                    message_handler_.send_interested();
-                    break;
-
-                case 1:
-                    // unchoke message;
-                    std::cout << "Received unchoke message. Starting download for piece" << std::endl;
-                    
-                    // download the piece from piece_index
-                    //
-                    piece_data = download_piece(piece_index, piece_length);
-                    if (!piece_data) {
-                            std::cerr << "Error downloading piece data at index " << piece_index << ". Terminating peer message handling." << std::endl;
-                            return std::nullopt;
-
-                        }
-
-                    // validate the hash
-                    computed_hash = bytes_to_hash(*piece_data);
-                    //std::string expected_hash = piece_hash.substr(i * 40, 40);
-                    if (computed_hash == piece_hash) {
-                        std::cout << "Hash Validated" << std::endl;
-                    } else {
-                        std::cerr << "Invalid Hash" << std::endl;
-                       return std::nullopt;                    }
-
-                    // piece data downloaded
-                    std::cout << "Piece downloaded successfully, size: " << piece_data->size() << " bytes." << std::endl;
-
-                    return piece_data;
-
-
-                default:
-                    std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
-                    break;
-            }
-        }
-    }
+ 
 
 private:
 //    SOCKET client_socket_;

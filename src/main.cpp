@@ -15,7 +15,7 @@
 #include "lib/utils.hpp"
 #include "lib/httplib.h"
 #include<winsock2.h>
-#include <ws2tcpip.h>// Required for InetPton()                       
+#include <ws2tcpip.h>// Required for InetPton()
 #include "lib/structures.hpp"
 //#include "lib/networking.hpp"
 #include "lib/TorrentParser/TorrentParser.hpp"
@@ -30,6 +30,12 @@
 
 // Mutex for file access
 std::mutex file_mutex;
+
+// Mutex for synchronized logging
+std::mutex log_mutex;
+
+// thread-safe counter
+std::atomic<int> total_downloaded_pieces = 0;
 
 // piece queue for processing the pieces in threads
 
