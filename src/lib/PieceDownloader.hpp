@@ -36,19 +36,20 @@ public:
         memcpy(buffer + 13, &network_length, 4);
 
         send(message_handler_.get_socket(), buffer, sizeof(buffer), 0);
-        std::cout << "Request Message sent" << std::endl;
+        //std::cout << "Request Message sent" << std::endl;
     }
 
     // download a single piece from the server
     std::optional<std::vector<uint8_t>> download_piece(uint32_t piece_index, uint32_t piece_length) {
         const uint32_t block_size = 16 * 1024;
         uint32_t offset = 0;
-
+        
+        /*
         std::cout << "---------Piece Info----------" << std::endl;
         std::cout << "Piece Index: " << piece_index << std::endl;
         std::cout << "Piece Length: " << piece_length << std::endl;
         std::cout << "-----------------------------" << std::endl;
-
+        */
         // to store the blocks downloaded
         std::vector<uint8_t> piece_data(piece_length);
 
@@ -67,7 +68,7 @@ public:
                 continue; // Ignore and wait for the next message
             }
 
-            std::cout << "Message ID received: " << static_cast<int>(message.id) << std::endl;
+            //std::cout << "Message ID received: " << static_cast<int>(message.id) << std::endl;
 
             if (message.id < 0 || message.id > 9) {
                 std::cerr << "Unexpected message ID: " << static_cast<int>(message.id) << std::endl;
@@ -100,18 +101,23 @@ public:
 
                     // Update the offset to move to the next block
                     offset += block.size();
-
+                    
+                    /*
                     std::cout << "-----Block Received---" << std::endl;
                     std::cout << "Received Index: " << received_index << std::endl;
                     std::cout << "Received Begin: " << received_begin << std::endl;
                     std::cout << "Offset : " << offset << std::endl;
                     std::cout << "Block Size: " << block.size() << std::endl;
                     std::cout << "----------------------" << std::endl;
+                    */
                 } else {
+                  /*
                     std::cerr << "Invalid block received. Expected index: " << piece_index
                               << ", offset: " << offset
                               << ", but got index: " << received_index
                               << ", offset: " << received_begin << std::endl;
+                              */
+                   // std::cerr << "Invalid block received. Reattempting block download" << std::endl;
                     continue; // Reattempt to download the current block
                 }
             }
@@ -135,14 +141,20 @@ public:
 
       std::string computed_hash = bytes_to_hash(*piece_data);
       //std::string expected_hash = piece_hash.substr(i * 40, 40);
+      /*
       if (computed_hash == piece_hash) {
-          std::cout << "hash validated" << std::endl;
+          //std::cout << "\nHash validated for " << "piece " << piece_index << std::endl;
       } else {
-          std::cerr << "invalid hash" << std::endl;
+          std::cerr << "Invalid hash for " << "piece " << piece_index << std::endl;
           return std::nullopt;                    }
-
+      */
+      if ( computed_hash != piece_hash){
+         std::cerr << "Invalid hash for " << "piece " << piece_index << std::endl;
+          return std::nullopt;   
+      }
       // piece data downloaded
-      std::cout << "piece downloaded successfully, size: " << piece_data->size() << " bytes." << std::endl;
+      
+      //std::cout << "piece downloaded successfully, size: " << piece_data->size() << " bytes." << std::endl;
 
       return piece_data;
     }

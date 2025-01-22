@@ -54,7 +54,7 @@ class PeerMessageHandler{
 
     // handling each message
     void handle_bit_field(const PeerMessage& message){
-      std::cout << "-----------Bitfield message received----------" << std::endl;
+     // std::cout << "-----------Bitfield message received----------" << std::endl;
       // ignore bitfield for now
       // clear any existing piece availability information
       piece_availability_.clear();
@@ -63,7 +63,8 @@ class PeerMessageHandler{
       for(size_t i=0; i < message.payload.size(); i++){
           // convert byte to 8 bits
           std::bitset<8> bits(message.payload[i]);
-          std::cout << "Byte " << i << ":" << bits << std::endl; 
+          
+          //std::cout << "Byte " << i << ":" << bits << std::endl; 
           
           // add each bit to piece availability vector (MSB to LSB)
           for (int bit=7; bit>=0; bit--){
@@ -72,6 +73,7 @@ class PeerMessageHandler{
 
       }
       
+      /*
       std::cout << "Bitfield: ";
       for (size_t i = 0; i < piece_availability_.size(); ++i) {
           std::cout << (piece_availability_[i] ? '1' : '0');
@@ -82,7 +84,7 @@ class PeerMessageHandler{
           std::cout << piece_index << " "; 
       }
       std::cout << std::endl << "--------------------------------------" << std::endl;
-
+      */
     }
 
   void send_interested(){
@@ -94,7 +96,7 @@ class PeerMessageHandler{
     memcpy(buffer+4, &id,1);
 
     send(client_socket, buffer, sizeof(buffer),0);
-    std::cout << "Interested message sent" << std::endl;
+    //std::cout << "Interested message sent" << std::endl;
 
     }
 

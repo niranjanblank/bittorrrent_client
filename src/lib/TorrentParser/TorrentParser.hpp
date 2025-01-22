@@ -37,9 +37,11 @@ class TorrentParser{
   public:
     TorrentFile parse(const std::string& filePath){
       json decoded_value =  parse_torrent(filePath);
-      std::cout << "Inside TorrentParser" << std::endl; 
-      std::cout << "Tracker URL: "<< decoded_value["announce"].get<std::string>()<<std::endl;
-      std::cout << "Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
+      
+      //std::cout << "Inside TorrentParser" << std::endl; 
+      //std::cout << "Tracker URL: "<< decoded_value["announce"].get<std::string>()<<std::endl;
+      //std::cout << "Length: "<< decoded_value["info"]["length"].get<int>()<<std::endl;
+      
       std::string base_url = decoded_value["announce"].get<std::string>();
       std::string encoded = encode_bencode(decoded_value["info"]);
       std::string info_hash = sha1_hash(encoded);
