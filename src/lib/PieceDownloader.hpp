@@ -111,12 +111,12 @@ public:
                     std::cout << "----------------------" << std::endl;
                     */
                 } else {
-                  /*
+                 /* 
                     std::cerr << "Invalid block received. Expected index: " << piece_index
                               << ", offset: " << offset
                               << ", but got index: " << received_index
                               << ", offset: " << received_begin << std::endl;
-                              */
+                      */        
                    // std::cerr << "Invalid block received. Reattempting block download" << std::endl;
                     continue; // Reattempt to download the current block
                 }
@@ -151,6 +151,9 @@ public:
       if ( computed_hash != piece_hash){
          std::cerr << "Invalid hash for " << "piece " << piece_index << std::endl;
           return std::nullopt;   
+      }
+       else {
+        std::cout << "Valid hash for piece " << piece_index << std::endl;
       }
       // piece data downloaded
       
