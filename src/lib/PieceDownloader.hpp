@@ -53,7 +53,14 @@ public:
         // to store the blocks downloaded
         std::vector<uint8_t> piece_data(piece_length);
 
+        int keep_alive_retries = 0;
+        int retries = 0;
+
         while (offset < piece_length) {
+            if(retries>50 or keep_alive_retries >1){
+              return std::nullopt;
+            }
+
             // current block size
             uint32_t current_block_size = std::min(block_size, piece_length - offset);
 
@@ -64,7 +71,9 @@ public:
 
             // Handle keep-alive messages
             if (message.length == 0) {
-                std::cout << "Keep-alive message received. Skipping..." << std::endl;
+                std::cout << "Keep-alive message received for piece "<< piece_index<<" Skipping..." << std::endl;
+              
+               // keep_alive_retries++;
                 continue; // Ignore and wait for the next message
             }
 
@@ -118,6 +127,7 @@ public:
                               << ", offset: " << received_begin << std::endl;
                       */        
                    // std::cerr << "Invalid block received. Reattempting block download" << std::endl;
+                  // retries++;
                     continue; // Reattempt to download the current block
                 }
             }
@@ -131,11 +141,12 @@ public:
     std::optional<std::vector<uint8_t>> piece_data;
 
     if(!message_handler_.get_choked()){
+      std::cout << "Attempting Download: Piece " << piece_index << std::endl;
       // download the piece
       piece_data = download_piece(piece_index, piece_length);
 
       if (!piece_data) {
-              std::cerr << "Error downloading piece data at index " << piece_index << ". Terminating peer message handling." << std::endl;
+              //std::cerr << "Error downloading piece data at index " << piece_index << ". Terminating peer message handling." << std::endl;
               return std::nullopt;    
       }
 
@@ -153,7 +164,7 @@ public:
           return std::nullopt;   
       }
        else {
-        std::cout << "Valid hash for piece " << piece_index << std::endl;
+       // std::cout << "Valid hash for piece " << piece_index << std::endl;
       }
       // piece data downloaded
       

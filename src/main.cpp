@@ -176,13 +176,16 @@ void handle_peer(const Peer& peer, const TorrentFile& torrent, PieceQueue& piece
           {
             std::lock_guard<std::mutex> log_lock(log_mutex);
              std::cout << "Piece " << piece.piece_index << " downloaded from peer (IP: " << peer.ip
-                              << "). Progress: " << std::fixed << std::setprecision(2) << percentage << "%\n";
+                              << "). Progress: " << std::fixed << std::setprecision(2) << percentage << "% " << "(" <<total_downloaded_pieces << "/" <<total_pieces << ")\n";
+
           }
 
         }
         else {
-          std::cerr << "Failed to download piece " << piece.piece_index << " from peer (IP: " << peer.ip
-                          << ", Port: " << peer.port << ")" << std::endl;
+          //std::cerr << "Failed to download piece " << piece.piece_index << " from peer (IP: " << peer.ip
+                     //     << ", Port: " << peer.port << ")" << std::endl;
+          //std::cerr << "Adding piece " << piece.piece_index << "back to download queue" << std::endl;
+          piece_queue.push(piece);
         }
       }
 
