@@ -77,7 +77,4 @@ Navigate to the build\Debug directory and run the client:
 bittorrent sample.torrent
 ```
 
-## Contact
-
-For questions or feedback, please contact [Niranjan Shah](mailto:niranjanshah@example.com).
 
