@@ -9,7 +9,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <bitset>
-
+#include <chrono>
 #include "lib/structures.hpp"
 #include "lib/PeerMessageHandler.hpp"
 
@@ -111,7 +111,7 @@ public:
                     // Update the offset to move to the next block
                     offset += block.size();
                     
-                    /*
+                   /* 
                     std::cout << "-----Block Received---" << std::endl;
                     std::cout << "Received Index: " << received_index << std::endl;
                     std::cout << "Received Begin: " << received_begin << std::endl;
@@ -119,13 +119,26 @@ public:
                     std::cout << "Block Size: " << block.size() << std::endl;
                     std::cout << "----------------------" << std::endl;
                     */
+                    
                 } else {
                  /* 
+                    std::cout << "-----Invalid Block Received---" << std::endl;
+                    std::cout << "Received Index: " << received_index << std::endl;
+                    std::cout << "Received Begin: " << received_begin << std::endl;
+                    //std::cout << "Offset : " << offset << std::endl;
+                    std::cout << "Block Size: " << block.size() << std::endl;
+                    std::cout << "Expected Index:" << piece_index << std::endl;
+                    std::cout << "Expected Begin" << offset << std::endl; 
+                    std::cout << "----------------------" << std::endl;
+                   */     
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        /*
                     std::cerr << "Invalid block received. Expected index: " << piece_index
                               << ", offset: " << offset
                               << ", but got index: " << received_index
                               << ", offset: " << received_begin << std::endl;
-                      */        
+                              */
+                           
                    // std::cerr << "Invalid block received. Reattempting block download" << std::endl;
                   // retries++;
                     continue; // Reattempt to download the current block
@@ -141,7 +154,7 @@ public:
     std::optional<std::vector<uint8_t>> piece_data;
 
     if(!message_handler_.get_choked()){
-      std::cout << "Attempting Download: Piece " << piece_index << std::endl;
+    // std::cout << "Attempting Download: Piece " << piece_index << "Size: " <<piece_length << std::endl;
       // download the piece
       piece_data = download_piece(piece_index, piece_length);
 

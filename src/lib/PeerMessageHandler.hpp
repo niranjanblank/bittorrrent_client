@@ -127,6 +127,16 @@ class PeerMessageHandler{
     return is_choked;
   }
 
+  int get_total_available_pieces(){
+    int count_of_ones = std::count(piece_availability_.begin(), piece_availability_.end(), true);
+   // std::cout << "Number of 1s in the vector: " << count_of_ones << std::endl;
+
+    return count_of_ones;
+    // Print the result
+   // std::cout << "Number of 1s in the vector: " << count_of_ones << std::endl;
+
+  }
+
 
   private:
     SOCKET client_socket;

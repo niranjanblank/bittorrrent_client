@@ -142,10 +142,11 @@ std::vector<PieceInfo> generate_piece_metadata(int total_length, int piece_lengt
     int total_pieces = static_cast<int>(std::ceil(static_cast<double>(total_length) / piece_length));
 
     // Ensure the number of hashes matches the total number of pieces
+    /*
     if (piece_hashes.size() / hash_length != total_pieces) {
         throw std::runtime_error("Mismatch between piece_hashes size and total_pieces.");
     }
-
+    */
     std::vector<PieceInfo> metadata;
 
     for (size_t i = 0; i < total_pieces; ++i) {

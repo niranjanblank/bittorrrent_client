@@ -76,6 +76,15 @@ class PieceQueue {
       stop = true;
       cv.notify_all();
     }
+
+size_t size() {
+        std::unique_lock<std::mutex> lock(mtx);
+        return pieces.size();
+    }
+    bool is_empty() {
+        std::unique_lock<std::mutex> lock(mtx);
+        return pieces.empty();
+    }
 };
 
 void save_piece_to_file(const std::string& file_path, uint32_t piece_index, const std::vector<uint8_t>& piece_data, uint32_t piece_length) {
@@ -122,10 +131,14 @@ void handle_peer(const Peer& peer, const TorrentFile& torrent, PieceQueue& piece
       PeerMessageHandler peerHandler = PeerMessageHandler(socketManager.getClientSocket());
       PeerMessage message = peerHandler.read_peer_messages();
       
+      // count all the ones
+      // Count all the true values
+ 
+
       if(message.id == 5){
         peerHandler.handle_bit_field(message);
       }
-
+          // std::cout << "Total Available  Pieces in this peer " << peerHandler.get_total_available_pieces() << std::endl;
       //send interested to the server
       peerHandler.send_interested();
 
@@ -143,56 +156,57 @@ void handle_peer(const Peer& peer, const TorrentFile& torrent, PieceQueue& piece
         if(!optional_piece.has_value()){
           break;
         }
-
+        
         PieceInfo piece = optional_piece.value();
+        //std::cout << "Piece Index: " <<piece.piece_index << " Piece Length : " << piece.piece_length << std::endl;
+        
+        try {
+                // Check if the peer has the requested piece
+                if (!peerHandler.has_piece(piece.piece_index)) {
+                    std::cerr << "Peer does not have the requested piece: " << piece.piece_index << std::endl;
+                    piece_queue.push(piece);  // Add the piece back to the queue
+                    continue;
+                }
 
-        // check if the peer has the piece
-        if (!peerHandler.has_piece(piece.piece_index)) {
-                std::cerr << "Peer does not have the requested piece: " << piece.piece_index << std::endl;
+                // Download piece
+                auto piece_data = PieceDownloader(peerHandler).handle_download_piece(
+                    piece.piece_index, piece.piece_length, piece.piece_hash
+                );
 
-                // add the piece back the the queue
-                piece_queue.push(piece);
-                continue;
-        }
+                if (piece_data) {
+                    // Save to file
+                    {
+                        std::lock_guard<std::mutex> lock(file_mutex);
+                        save_piece_to_file(output_file_name, piece.piece_index, *piece_data, piece.piece_length);
+                    }
 
-        // initiate the download of piece and save to file
-        auto piece_data = PieceDownloader(peerHandler).handle_download_piece(
-            piece.piece_index, piece.piece_length, piece.piece_hash
-            );
+                    // Update progress
+                    int total_pieces = static_cast<int>(std::ceil(static_cast<double>(torrent.total_length) / torrent.piece_length));
+                    int completed_pieces = ++total_downloaded_pieces;
+                    double percentage = (static_cast<double>(completed_pieces) / total_pieces) * 100.0;
 
-        if(piece_data){
-
-          {
-          std::lock_guard<std::mutex> lock(file_mutex);
-          save_piece_to_file(output_file_name, piece.piece_index, *piece_data, piece.piece_length);
-         // std::cout << "Piece " << piece.piece_index << " downloaded and saved." << std::endl;
-          }
-
-          // update and log progress
-          //// Calculate the total number of pieces
-          int total_pieces = static_cast<int>(std::ceil(static_cast<double>(torrent.total_length) / torrent.piece_length));
-          int completed_pieces = ++total_downloaded_pieces;
-          double percentage = (static_cast<double>(completed_pieces) / total_pieces) * 100.0;
-          {
-            std::lock_guard<std::mutex> log_lock(log_mutex);
-             std::cout << "Piece " << piece.piece_index << " downloaded from peer (IP: " << peer.ip
-                              << "). Progress: " << std::fixed << std::setprecision(2) << percentage << "% " << "(" <<total_downloaded_pieces << "/" <<total_pieces << ")\n";
-
-          }
-
-        }
-        else {
-          //std::cerr << "Failed to download piece " << piece.piece_index << " from peer (IP: " << peer.ip
-                     //     << ", Port: " << peer.port << ")" << std::endl;
-          //std::cerr << "Adding piece " << piece.piece_index << "back to download queue" << std::endl;
-          piece_queue.push(piece);
-        }
-      }
-
+                    {
+                        std::lock_guard<std::mutex> log_lock(log_mutex);
+                        std::cout << "Piece index: " << piece.piece_index << " downloaded from peer (IP: " << peer.ip
+                                  << "). Piece Size: " << piece.piece_length << " Progress: " << std::fixed << std::setprecision(2) << percentage
+                                  << "% (" << total_downloaded_pieces << "/" << total_pieces << ")\n";
+                    }
+                } else {
+                    std::cerr << "Failed to download piece " << piece.piece_index << " from peer (IP: " << peer.ip << ")\n";
+                    piece_queue.push(piece);  // Re-add piece to the queue if download failed
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Error while processing piece " << piece.piece_index << ": " << e.what() << std::endl;
+                piece_queue.push(piece);  // **Ensure the piece is re-added if an exception occurs**
+            throw std::runtime_error("Peer disconnected unexpectedly. Stopping downloads from this peer.");
+            }
+        
+        }      
   }
+
   catch(const std::exception& e){
     std::cerr << "Error with peer (IP: " << peer.ip << ", Port: " << peer.port << "): " << e.what() << std::endl;
-  }
+    }
 
 }
 
@@ -241,9 +255,10 @@ int main(int argc, char* argv[]){
       for (const auto& piece : piece_metadata) {
                 piece_queue.push(piece);
       }
-      piece_queue.finish(); // Signal no more pieces will be added
+      piece_queue.finish(); // Signal no more initial pieces will be added
       
       //std::cout << "Piece Metadata added to queue" << std::endl;
+      
       /*
       std::cout << "-------- Piece Metadata --------" << std::endl;
       for (auto piece : piece_metadata) {
@@ -252,7 +267,8 @@ int main(int argc, char* argv[]){
                     << ", Hash: " << to_hex(piece.piece_hash) << std::endl;
       }
       std::cout << "--------------------------------" << std::endl;
-    */
+        */
+      
       // peer peer_discovery
       //TorrentFile torrent(info_hash,peer_id,6681,0,0,decoded_value["info"]["piece length"],true);
       // discover the peers from where we can download the file using the url from torrent file
@@ -276,7 +292,45 @@ int main(int argc, char* argv[]){
           t.join();
         }
       }
-      std::cout << "------------Download complete------------" << std::endl;      
+
+      
+      /*
+
+     // ✅ Get the remaining pieces count safely
+      std::cout << "Remaining pieces in queue: " << piece_queue.size() << std::endl;
+
+      // Retry downloading the remaining pieces if any are left
+      while (!piece_queue.is_empty()) {
+          std::optional<PieceInfo> optional_piece = piece_queue.pop();
+          if (!optional_piece.has_value()) {
+              break;
+          }
+
+          PieceInfo piece = optional_piece.value();
+          std::cout << "Piece " << piece.piece_index << " was not downloaded. Retrying..." << std::endl;
+
+          std::vector<std::thread> retry_threads;
+          for (const Peer &peer : peers) {
+              retry_threads.emplace_back(handle_peer, peer, std::cref(torrent), std::ref(piece_queue), std::cref(output_file_name));
+          }
+
+          // Join retry threads
+          for (std::thread &t : retry_threads) {
+              if (t.joinable()) {
+                  t.join();
+              }
+          }
+      }
+
+      std::cout << "Final check: Remaining pieces in queue: " << piece_queue.size() << std::endl;
+      if (piece_queue.is_empty()) {
+          std::cout << "All pieces were downloaded successfully!" << std::endl;
+      } else {
+          std::cout << "Some pieces are still missing after retrying. Please check logs for details." << std::endl;
+      }  
+      */
+      std::cout << "------------Download complete------------" << std::endl;   
+
     }
     catch(const std::exception& e){
       std::cerr << "Error: " << e.what() <<std::endl;
