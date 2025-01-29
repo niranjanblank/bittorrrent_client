@@ -65,7 +65,7 @@ public:
     // function to send the handshake and process the response
     std::optional<HandshakeMessage> send_handshake(SOCKET client_socket) const {
         std::string handshake = create_handshake();
-        std::cout << "Handshake message: " << handshake << std::endl;
+        //std::cout << "Handshake message: " << handshake << std::endl;
 
         // send handshake to server
         size_t byte_count = send(client_socket, handshake.c_str(), handshake.size(), 0);
@@ -73,7 +73,7 @@ public:
             throw std::runtime_error("Server sent error: " + std::to_string(WSAGetLastError()));
         }
 
-        std::cout << "Handshake sent: " << byte_count << " bytes" << std::endl;
+        //std::cout << "Handshake sent: " << byte_count << " bytes" << std::endl;
 
         // receive data from server
         char handshake_buffer[68];
@@ -89,9 +89,9 @@ public:
 
         // parse the received handshake
         HandshakeMessage parsed_handshake = parse_handshake_message(handshake_buffer, bytes_received);
-        std::cout << "Protocol Length: " << static_cast<int>(parsed_handshake.protocol_length) << std::endl;
-        std::cout << "Protocol identifier: " << parsed_handshake.protocol_identifier << std::endl;
-        std::cout << "PeerID: " << to_hex(parsed_handshake.peer_id) << std::endl;
+        //std::cout << "Protocol Length: " << static_cast<int>(parsed_handshake.protocol_length) << std::endl;
+        //std::cout << "Protocol identifier: " << parsed_handshake.protocol_identifier << std::endl;
+        //std::cout << "PeerID: " << to_hex(parsed_handshake.peer_id) << std::endl;
 
         return parsed_handshake;
     }

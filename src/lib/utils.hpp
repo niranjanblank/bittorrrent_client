@@ -142,10 +142,11 @@ std::vector<PieceInfo> generate_piece_metadata(int total_length, int piece_lengt
     int total_pieces = static_cast<int>(std::ceil(static_cast<double>(total_length) / piece_length));
 
     // Ensure the number of hashes matches the total number of pieces
+    /*
     if (piece_hashes.size() / hash_length != total_pieces) {
         throw std::runtime_error("Mismatch between piece_hashes size and total_pieces.");
     }
-
+    */
     std::vector<PieceInfo> metadata;
 
     for (size_t i = 0; i < total_pieces; ++i) {
@@ -162,4 +163,38 @@ std::vector<PieceInfo> generate_piece_metadata(int total_length, int piece_lengt
     }
 
     return metadata;
+}
+
+void verify_file_hash(const std::string& file_path, const std::string& expected_hash) {
+    try {
+        // Open the file in binary mode
+        std::ifstream file(file_path, std::ios::binary | std::ios::ate);
+        if (!file) {
+            throw std::runtime_error("Failed to open file for hash verification: " + file_path);
+        }
+
+        // Get the size of the file
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        // Read the file into a vector
+        std::vector<uint8_t> buffer(size);
+        if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+            throw std::runtime_error("Failed to read file for hash verification.");
+        }
+
+        // Calculate the hash of the file data
+        std::string file_hash = bytes_to_hash(buffer);
+
+        // Compare the calculated hash with the expected hash
+        if (file_hash == expected_hash) {
+            std::cout << "File hash matches the expected hash. Download verified successfully." << std::endl;
+        } else {
+            std::cerr << "File hash does not match the expected hash. Download may be corrupt." << std::endl;
+            std::cerr << "Expected: " << expected_hash << std::endl;
+            std::cerr << "Actual:   " << file_hash << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error verifying file hash: " << e.what() << std::endl;
+    }
 }
