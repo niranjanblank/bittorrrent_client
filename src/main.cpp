@@ -280,11 +280,14 @@ int main(int argc, char* argv[]){
           std::cout << "IP: " << peer.ip << ", Port: " << peer.port << std::endl;
       }
      
-
+      std::cout << "------------------------------------" << std::endl;
       std::vector<std::thread> threads;
       for(const Peer &peer: peers){
         threads.emplace_back(handle_peer, peer, std::cref(torrent), std::ref(piece_queue), std::cref(output_file_name));
       }
+      
+      std::cout << "--------Download Started------------" << std::endl;
+
 
       // prorcess the threads
       for (std::thread& t: threads){
@@ -293,7 +296,7 @@ int main(int argc, char* argv[]){
         }
       }
 
-      
+    
       /*
 
      // ✅ Get the remaining pieces count safely

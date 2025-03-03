@@ -51,7 +51,7 @@ class SocketManager{
             throw std::runtime_error("Client connection failed: " + std::to_string(WSAGetLastError()));
         }
 
-        std::cout << "Client connected to the server" << std::endl;
+        //std::cout << "Client connected to the server: " << peer_ip << ":" <<peer_port <<std::endl ;
     }
 
     // getter for the socket
